@@ -1,0 +1,16 @@
+DEBUG while(nReadLeft > 0) in acces->os_retrieve
+DEBUG server->retrieve di dato non esistente
+DEBUG server->delete dato non esistente
+DEBUG memory leak
+DEBUG gestione server chiuso e riaperto e client rimasto aperto
+DEBUG snfprintf occorre fare free delle altre variabili?
+
+BUG crasha se la store nel dato ho degli spazi vuoti
+BUG crasha se il nome del file è molto lungo
+
+TODO gestione ritorno delle malloc
+TODO gestione segnali
+TODO scegliere quando fare return null su manage request
+TODO gestione chiusura server riporto allo stato precedente se ho operazioni non terminate(es potrei fare un'unica write per la store) terminazione tuttu i thread
+TODO cleanup_handler
+TODO aggiungere a t_client fd, opSucc e opFail
