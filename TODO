@@ -5,6 +5,7 @@ DEBUG memory leak
 DEBUG gestione server chiuso e riaperto e client rimasto aperto
 DEBUG snfprintf occorre fare free delle altre variabili?
 
+TODO gestione printing SOLO sul server/client no librerie
 TODO gestione thread mutex return
 TODO gestione ritorno delle malloc
 TODO gestione segnali

@@ -1,6 +1,7 @@
 #if !defined(CONNECTION_H)
 #define CONNECTION_H
 
+#define _POSIX_C_SOURCE 200112L
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -20,14 +21,8 @@
 
 #define SOCKNAME "./objstore.sock"
 #define MAXBACKLOG 32
-#define BUFFER_SIZE 512
-
-#define SYSCALL(r, c, e) \
-    if ((r = c) == -1) { perror(e); exit(errno); }                                  
-
-#define CHECKNULL(r, c, e) \
-    if ((r = c) == NULL) { perror(e); exit(errno); }
-
+#define BUFSIZE 512
+    
 #define EOPEN "Error opening the file."
        
-#endif /* CONNECTION_H */
+#endif

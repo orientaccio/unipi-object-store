@@ -50,13 +50,13 @@ all		: $(TARGETS)
 
 libAccess.a: access.o access.h
 	$(AR) $(ARFLAGS) $@ $<
-
+	
 objstore_client: objstore_client.o libAccess.a 
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-objstore_server: objstore_server.o
+	
+objstore_server: objstore_server.o 
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
+	
 clean		: 
 	rm -f $(TARGETS)
 cleanall	: clean

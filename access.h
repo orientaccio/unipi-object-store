@@ -1,30 +1,51 @@
 #if !defined(ACCESS_H_)
 #define ACCESS_H_
 
-#define _POSIX_C_SOURCE 200112L //per strtok_r
-#include <string.h>
 #include <stddef.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <assert.h>
-#include <unistd.h>
-#include <ctype.h>
-#include <locale.h>
-#include <pthread.h>
+#include "connection.h"
+#include "utils.h"
 
 #define MAXNAMELEN 32
-#define BUFF_LEN 512
 
-#define CHECKZERO(r, c, e) \
-    if ((r = c) == 0) { perror(e); }
-
+/**
+ * @function os_connect
+ * @brief enstablish the connection
+ * @param name of the client
+ * @return 1 if success, 0 if fail
+ */
 int os_connect(char *name);
+
+/**
+ * @function os_store
+ * @brief stores an object called *name with data *block and length len
+ * @param name of the object
+ * @param block is the file information
+ * @param len is the block's length
+ * @return 1 if success, 0 if fail
+ */
 int os_store(char *name, void *block, size_t len);
+
+/**
+ * @function os_retrieve
+ * @brief retrieves an object's data
+ * @param name of the object to retrieve
+ * @return data if success, NULL if fail
+ */
 void *os_retrieve(char *name);
+
+/**
+ * @function os_delete
+ * @brief delete the object called *name
+ * @param name of the object to delete
+ * @return 1 if success, 0 if fail
+ */
 int os_delete(char *name);
+
+/**
+ * @function os_disconnect
+ * @brief disconnect from the session
+ * @return 1 if success, 0 if fail
+ */
 int os_disconnect();
 
 #endif /* ACCESS_H */

@@ -50,7 +50,7 @@ echo " Esito test 2:"
 echo " -batterie test 2 superate: $nt2 batterie fallite: $((nt2Idedali-nt2))"
 echo " Esito test 3"
 echo " -batterie test 3 superate: $nt3 batterie fallite: $((nt3Idedali-nt3))"
-if [ $nclient == 100 ] && [ $nt1 == 1000 ] && [ $nt2 == 30 ] && [ $nt3 == 20 ] ;
+if [ $nt1 == 1000 ] && [ $nt2 == 30 ] && [ $nt3 == 20 ] ; #[ $nclient == 100 ] && 
     then 
         echo "Test completato correttamente"
     else

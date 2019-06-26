@@ -1,5 +1,5 @@
-#define _POSIX_C_SOURCE 200112L
 #include "connection.h"
+#include "utils.h"
 
 // mutex global variable
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -11,14 +11,14 @@ typedef struct client
     long fd;
 } client_t;
 
-static char *err_message;
+char *err_message;
 client_t *connected_client;
 
 int n_client = 0;
 int n_items = 0;
 long total_size = 0;
 
-static void cleanup_thread_handler(void *arg) { close((long)arg); }
+//void cleanup_thread_handler(void *arg) { close((long)arg); }
 void cleanup() { unlink(SOCKNAME); }
 
 int is_connected(char *name) 
@@ -46,13 +46,14 @@ client_t *client_init(long fd)
 
 client_t *client_add(client_t *client, char *name) 
 {
-    pthread_mutex_lock(&mutex);
+    int notused;
+    MUTEXCALL(notused, pthread_mutex_lock(&mutex), "lock error");
 
     if (is_connected(name)) 
     {  
         // TODO reply
         fprintf(stderr, "client is already connected\n");
-        pthread_mutex_unlock(&mutex);
+        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
         // TODO exit handler
         return NULL;
     }
@@ -63,7 +64,7 @@ client_t *client_add(client_t *client, char *name)
         connected_client->name = (char *)malloc(sizeof(char) * strlen(name) + 1);
         strcpy(connected_client->name, name);
         n_client++;
-        pthread_mutex_unlock(&mutex);
+        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
         return connected_client;
     }
 
@@ -79,19 +80,21 @@ client_t *client_add(client_t *client, char *name)
     
     n_client++;
     fprintf(stderr, "client %s added.\n", name);
-    pthread_mutex_unlock(&mutex);
+    
+    MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
     return client;
 }
 
 void client_remove(client_t *client) 
 {
-    pthread_mutex_lock(&mutex);
+    int notused;
+    MUTEXCALL(notused, pthread_mutex_lock(&mutex), "lock error");
     
     client_t *curr = connected_client;
     client_t *prev = NULL;
     if (client == NULL || client->name == NULL || curr == NULL) 
     {
-        pthread_mutex_unlock(&mutex);
+        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
         return;
     }
     
@@ -110,9 +113,10 @@ void client_remove(client_t *client)
     
     n_client--;
     fprintf(stderr, "client: n:{%d}, name: {%s} \n", n_client, curr->name);
-    pthread_mutex_unlock(&mutex);
     free(curr->name);
     free(curr); 
+    
+    MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
 }
 
 char *get_dir_path(char *name) 
@@ -191,17 +195,17 @@ client_t *manage_request(char *buf, client_t *client)
                 return client;
             }
 
-            long left_read_len = (long) ceil((double)(file_length - first_read_len) / BUFFER_SIZE);
+            long left_read_len = (long) ceil((double)(file_length - first_read_len) / BUFSIZE);
             fwrite(file_data, sizeof(char), first_read_len, fp1);
 
             while (left_read_len > 0) 
             {
-                memset(buf, '\0', BUFFER_SIZE);
+                memset(buf, '\0', BUFSIZE);
 
-                SYSCALL(result, read(client->fd, buf, BUFFER_SIZE), "store read error");
+                SYSCALL(result, read(client->fd, buf, BUFSIZE), "store read error");
                 fprintf(stderr, "%s\n", buf);
                 fwrite(buf, sizeof(char),
-                       (left_read_len > 1) ? sizeof(char) * BUFFER_SIZE : sizeof(char) * ((file_length - first_read_len) % BUFFER_SIZE),
+                       (left_read_len > 1) ? sizeof(char) * BUFSIZE : sizeof(char) * ((file_length - first_read_len) % BUFSIZE),
                        fp1);
                 left_read_len--;
             }
@@ -288,6 +292,7 @@ client_t *manage_request(char *buf, client_t *client)
         } 
         else if (strcmp(comand, "LEAVE") == 0) 
         {
+            SYSCALL(result, write(client->fd, "OK \n", 5 * sizeof(char)), "errore invio");
             fprintf(stderr, "%s leaves", client->name);
             client_remove(client);
             return NULL;
@@ -314,13 +319,13 @@ void *threadF(void *arg)
 
     long connfd = (long)arg;
     client_t *client = client_init(connfd);
-    char *buffer = (char *)malloc(sizeof(char) * BUFFER_SIZE);
+    char *buffer = (char *)malloc(sizeof(char) * BUFSIZE);
     int result = -1;
 
     do 
     {
-        memset(buffer, '\0', BUFFER_SIZE);
-        SYSCALL(result, read(connfd, buffer, BUFFER_SIZE), "errore lettura thread F");
+        memset(buffer, '\0', BUFSIZE);
+        SYSCALL(result, read(connfd, buffer, BUFSIZE), "errore lettura thread F");
         if (result < 1) 
             break;
         // DEBUG_BUFFER(buffer, result);

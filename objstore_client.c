@@ -1,11 +1,59 @@
-#include <access.h>
+#include "access.h"
 
 #define START_SIZE 100  // start offset
 #define INC_SIZE 1000   // modify this to reach 100000 bytes
 
 int op_tot = 0;
-int op_success = 0;
 int op_fail = 0;
+int op_success = 0;
+
+void test1();
+void test2();
+void test3();
+void check_args(int argc, char* argv[]);
+void debug_menu();
+
+int main(int argc, char* argv[]) 
+{
+    check_args(argc, argv);
+    debug_fprintf("%s\n\n", "===== TEST MODE =====");
+    
+    // enstablish the connection
+    int res;
+    char* username = argv[1];
+    CHECKZERO(res, os_connect(username), "connection error");
+    if (res == 0) 
+        exit(EXIT_FAILURE);
+
+    // debug mode - test single requests
+    if (argc == 2)
+        while (1)
+            debug_menu();
+    
+    switch (strtol(argv[2], NULL, 10)) 
+    {
+        case 1:
+            test1();
+            break;
+        case 2:
+            test2();
+            break;
+        case 3:
+            test3();
+            break;
+        default:
+            break;
+    }
+    fprintf(stderr,
+            "\n--------Risultati test--------\n\
+            Operations total: %d\n\
+            Operations success: %d\n\
+            Operations failed: %d\n\n",
+            op_tot, op_success, op_fail);
+    
+    CHECKZERO(res, os_disconnect(), "Error LEAVE");
+    return 0;
+}
 
 void test1() 
 {
@@ -26,11 +74,10 @@ void test1()
         }
 
         CHECKZERO(res, os_store(data_name, data, strlen(data)), "Error STORE");
+        fprintf(stderr, "RESPONSE: OK\n");
         
-        if (res == -1)
-            op_fail++;
-        else
-            op_success++;
+        op_success += res;
+        op_fail += !res;
     }
 
     free(data);
@@ -151,45 +198,4 @@ void debug_menu()
     }
     
     fprintf(stderr, "FINE OP\n"); 
-}
-
-int main(int argc, char* argv[]) 
-{
-    check_args(argc, argv);
-    
-    // enstablish the connection
-    int res;
-    char* username = argv[1];
-    CHECKZERO(res, os_connect(username), "connection error");
-    if (res == 0) 
-        exit(EXIT_FAILURE);
-
-    // debug mode - test single requests
-    if (argc == 2)
-        while (1)
-            debug_menu();
-    
-    switch (strtol(argv[2], NULL, 10)) 
-    {
-        case 1:
-            test1();
-            break;
-        case 2:
-            test2();
-            break;
-        case 3:
-            test3();
-            break;
-        default:
-            break;
-    }
-    fprintf(stderr,
-            "\n--------Risultati test--------\n\
-            Operations total: %d\n\
-            Operations success: %d\n\
-            Operations failed: %d\n\n",
-            op_tot, op_success, op_fail);
-    CHECKZERO(res, os_disconnect(), "Error LEAVE");
-
-    return 0;
 }
