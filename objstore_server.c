@@ -1,143 +1,6 @@
-#include "connection.h"
-#include "utils.h"
-
-// mutex global variable
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-typedef struct client 
-{
-    char *name;
-    struct client *next;
-    long fd;
-} client_t;
+#include "client.h"
 
 char *err_message;
-client_t *connected_client;
-
-int n_client = 0;
-int n_items = 0;
-long total_size = 0;
-
-//void cleanup_thread_handler(void *arg) { close((long)arg); }
-void cleanup() { unlink(SOCKNAME); }
-
-int is_connected(char *name) 
-{
-    fprintf(stderr, "connected:  %s\n", name);
-    client_t *curr = connected_client;
-
-    while (curr != NULL) 
-    {
-        if (strcmp(name, curr->name) == 0) return 1;
-        curr = curr->next;
-    }
-
-    return 0;
-}
-
-client_t *client_init(long fd) 
-{
-    client_t *client = (client_t *)malloc(sizeof(client));
-    client->next = NULL;
-    client->name = NULL;
-    client->fd = fd;
-    return client;
-}
-
-client_t *client_add(client_t *client, char *name) 
-{
-    int notused;
-    MUTEXCALL(notused, pthread_mutex_lock(&mutex), "lock error");
-
-    if (is_connected(name)) 
-    {  
-        // TODO reply
-        fprintf(stderr, "client is already connected\n");
-        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
-        // TODO exit handler
-        return NULL;
-    }
-    
-    if (connected_client == NULL) 
-    {
-        connected_client = client;
-        connected_client->name = (char *)malloc(sizeof(char) * strlen(name) + 1);
-        strcpy(connected_client->name, name);
-        n_client++;
-        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
-        return connected_client;
-    }
-
-    // setting client name
-    client->name = (char *)malloc(sizeof(char) * (strlen(name) + 1));
-    strcpy(client->name, name);
-    
-    // add to the list
-    client_t *curr = connected_client;
-    while (curr->next != NULL) 
-        curr = curr->next;
-    curr->next = client;
-    
-    n_client++;
-    fprintf(stderr, "client %s added.\n", name);
-    
-    MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
-    return client;
-}
-
-void client_remove(client_t *client) 
-{
-    int notused;
-    MUTEXCALL(notused, pthread_mutex_lock(&mutex), "lock error");
-    
-    client_t *curr = connected_client;
-    client_t *prev = NULL;
-    if (client == NULL || client->name == NULL || curr == NULL) 
-    {
-        MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
-        return;
-    }
-    
-    fprintf(stderr, "{%s}\n", client->name);
-    
-    while (curr->next != NULL && client != curr) 
-    {
-        prev = curr;
-        curr = curr->next;
-    }
-    
-    if (prev == NULL) 
-        connected_client = curr->next;
-    else 
-        prev->next = curr->next;
-    
-    n_client--;
-    fprintf(stderr, "client: n:{%d}, name: {%s} \n", n_client, curr->name);
-    free(curr->name);
-    free(curr); 
-    
-    MUTEXCALL(notused, pthread_mutex_unlock(&mutex), "unlock error");
-}
-
-char *get_dir_path(char *name) 
-{
-    int path_len = sizeof(char) * (strlen("data/") + strlen(name) + 1);
-    char *path = (char *)malloc(path_len);
-    snprintf(path, path_len, "data/%s", name);
-    
-    return path;
-}
-
-char *get_file_path(char *file_name, char *name) 
-{
-    char *dir = get_dir_path(name);
-    int path_len = sizeof(char) * (strlen(dir) + strlen(name) + 2);
-    char *path = (char *)malloc(path_len);
-    snprintf(path, path_len, "%s/%s", dir, name);
-
-    free(dir);
-    return path;
-}
 
 client_t *manage_request(char *buf, client_t *client) 
 {
@@ -186,6 +49,9 @@ client_t *manage_request(char *buf, client_t *client)
             long first_read_len = strlen(file_data);
             FILE *fp1;
 
+            fprintf(stderr, "file_name: %s\n", file_name);
+            fprintf(stderr, "file_path: %s\n", file_path);
+            
             CHECKNULL(fp1, fopen(file_path, "w"), EOPEN);
             if (fp1 == NULL) 
             {
@@ -203,7 +69,7 @@ client_t *manage_request(char *buf, client_t *client)
                 memset(buf, '\0', BUFSIZE);
 
                 SYSCALL(result, read(client->fd, buf, BUFSIZE), "store read error");
-                fprintf(stderr, "%s\n", buf);
+                //fprintf(stderr, "%s\n", buf);
                 fwrite(buf, sizeof(char),
                        (left_read_len > 1) ? sizeof(char) * BUFSIZE : sizeof(char) * ((file_length - first_read_len) % BUFSIZE),
                        fp1);
@@ -355,17 +221,17 @@ void spawn_thread(long connfd)
 {
     pthread_attr_t thattr;
     pthread_t thid;
-    /*
-            sigset_t mask, oldmask;
-            sigemptyset(&mask);
-            sigaddset(&mask, SIGINT);
-            sigaddset(&mask, SIGQUIT);
+    
+    //sigset_t mask, oldmask;
+    //sigemptyset(&mask);
+    //sigaddset(&mask, SIGINT);
+    //sigaddset(&mask, SIGQUIT);
 
-            if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) {
-                    printThrdError(connfd, "FATAL ERROR\n");
-                    return;
-            }
-    */
+    //if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) {
+    //        printThrdError(connfd, "FATAL ERROR\n");
+    //        return;
+    //}
+    
     if (pthread_attr_init(&thattr) != 0) 
     {
         fprintf(stderr, "pthread_attr_init FALLITA\n");
@@ -502,6 +368,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    sleep(10);
+    
     unlink(SOCKNAME);
     return 0;
 }

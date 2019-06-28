@@ -23,19 +23,18 @@
 #
 # ---------------------------------------------------------------------------
 
-CC			=  gcc
-AR          =  ar
-CFLAGS	    += -std=c99 -Wall #-Werror
-ARFLAGS     =  rvs
+CC		=  gcc
+AR          	=  ar
+CFLAGS		+= -std=c99 -Wall #-Werror
+ARFLAGS		=  rvs
 INCLUDES	= -I.
 LDFLAGS 	= -L.
 OPTFLAGS	= -g -O3 
-LIBS        = -pthread -lm
+LIBS        	= -pthread -lm
 
-# aggiungere qui altri targets
 TARGETS		= objstore_server	 \
-			  objstore_client	 \
-			  testout.log
+			objstore_client	 \
+			testout.log
 
 .PHONY: all clean cleanall test
 .SUFFIXES: .c .h
@@ -50,17 +49,29 @@ all		: $(TARGETS)
 
 libAccess.a: access.o access.h
 	$(AR) $(ARFLAGS) $@ $<
+
+libClient.a: client.o client.h
+	$(AR) $(ARFLAGS) $@ $<
+
+libUtils.a: utils.o utils.h
+	$(AR) $(ARFLAGS) $@ $<
 	
 objstore_client: objstore_client.o libAccess.a 
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 	
-objstore_server: objstore_server.o 
+objstore_server: objstore_server.o libClient.a libUtils.a #threadF.o
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+#threadF.o: connection.h threadF.h
 	
 clean		: 
 	rm -f $(TARGETS)
-cleanall	: clean
-	\rm -f *.o *.a
+	
+cleandata	:
+	rm -f -r data
+	
+cleanall	: clean cleandata
+	rm -f -r *.o *.a 
 test		:
 	> testout.log
 	bash looptest.sh
