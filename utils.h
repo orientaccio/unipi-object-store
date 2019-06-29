@@ -27,7 +27,6 @@
 #define CHECKZERO(r, c, e) \
     if ((r = c) == 0) { perror(e); }
 
-
 char *get_dir_path(char *name);
 char *get_file_path(char *file_name, char *name);
     

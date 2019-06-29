@@ -1,6 +1,14 @@
-#include "client.h"
+#include "threadF.h"
 
 char *err_message;
+
+void DEBUG_BUFFER(char *buffer, int result) 
+{
+    fprintf(stderr, "BUFFER:{");
+    for (int i = 0; i < 512; i++) 
+        fprintf(stderr, "%c", buffer[i]);
+    fprintf(stderr, "} %d\n", result);
+}
 
 client_t *manage_request(char *buf, client_t *client) 
 {
@@ -69,7 +77,7 @@ client_t *manage_request(char *buf, client_t *client)
                 memset(buf, '\0', BUFSIZE);
 
                 SYSCALL(result, read(client->fd, buf, BUFSIZE), "store read error");
-                //fprintf(stderr, "%s\n", buf);
+                
                 fwrite(buf, sizeof(char),
                        (left_read_len > 1) ? sizeof(char) * BUFSIZE : sizeof(char) * ((file_length - first_read_len) % BUFSIZE),
                        fp1);
@@ -171,21 +179,11 @@ client_t *manage_request(char *buf, client_t *client)
     return client;
 }
 
-void DEBUG_BUFFER(char *buffer, int result) 
-{
-    fprintf(stderr, "BUFFER:{");
-    for (int i = 0; i < 512; i++) 
-        fprintf(stderr, "%c", buffer[i]);
-    fprintf(stderr, "} %d\n", result);
-}
-
 void *threadF(void *arg) 
 {
-    printf("New thread started\n");
-
     long connfd = (long)arg;
     client_t *client = client_init(connfd);
-    char *buffer = (char *)malloc(sizeof(char) * BUFSIZE);
+    char *buffer = (char *) malloc(sizeof(char) * BUFSIZE);
     int result = -1;
 
     do 
@@ -199,7 +197,7 @@ void *threadF(void *arg)
         if (client == NULL) 
             break;
 
-        fprintf(stderr, "	Thread F: %s %d \n", client->name, result);
+        fprintf(stderr, "Thread F: %s %d \n", client->name, result);
     } 
     while (1);
     free(buffer);
@@ -211,7 +209,7 @@ void *threadF(void *arg)
     return NULL;
 }
 
-void printThrdError(int connfd, char *msg) 
+void print_thread_error(int connfd, char *msg) 
 {
     fprintf(stderr, "%s", msg);
     close(connfd);
@@ -228,7 +226,7 @@ void spawn_thread(long connfd)
     //sigaddset(&mask, SIGQUIT);
 
     //if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) {
-    //        printThrdError(connfd, "FATAL ERROR\n");
+    //        print_thread_error(connfd, "FATAL ERROR\n");
     //        return;
     //}
     
@@ -238,6 +236,7 @@ void spawn_thread(long connfd)
         close(connfd);
         return;
     }
+    
     // set the thread in detached mode
     if (pthread_attr_setdetachstate(&thattr, PTHREAD_CREATE_DETACHED) != 0) 
     {
@@ -256,120 +255,5 @@ void spawn_thread(long connfd)
     }
 
     // if (pthread_sigmask(SIG_SETMASK, & oldmask, NULL) != 0)
-    // printThrdError(connfd, "FATAL ERROR\n");
-}
-
-volatile sig_atomic_t received = 0;
-
-void gestore() { received = 1; }
-
-void signal_manager() 
-{
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = gestore;
-    // sa.sa_flags = ERESTART;
-
-    int notused;
-    /*
-     * change SIGTSTP to SIGUSR1
-    
-     * */
-    SYSCALL(notused, sigaction(SIGUSR1, &sa, NULL), "sigaction");
-}
-
-int is_dot(const char dir[]) 
-{
-    int l = strlen(dir);
-
-    if ((l > 0 && dir[l - 1] == '.')) 
-        return 1;
-    return 0;
-}
-
-void count_items(char *nomedir) 
-{
-    DIR *dir;
-    if ((dir = opendir(nomedir)) == NULL) 
-    {
-        perror("opendir");
-        return;
-    }
-
-    struct dirent *file;
-
-    while ((file = readdir(dir)) != NULL) 
-    {
-        struct stat statbuf;
-        char filename[512];
-        strncpy(filename, nomedir, strlen(nomedir) + 1);
-        strncat(filename, "/", 2);
-        strncat(filename, file->d_name, strlen(file->d_name) + 1);
-
-        if (is_dot(filename)) continue;
-
-        if (stat(filename, &statbuf) == -1) 
-        {
-            perror("stat error");
-            return;
-        }
-
-        // recursive print if file = directory
-        if (S_ISDIR(statbuf.st_mode))
-            count_items(filename);
-        else 
-        {
-            n_items++;
-            total_size += statbuf.st_size;
-        }
-    }
-
-    closedir(dir);
-}
-
-int main(int argc, char *argv[]) 
-{
-    cleanup();
-    if (mkdir("data", 0777) == -1 && errno != EEXIST) exit(1);
-
-    count_items("data");
-    signal_manager();
-
-    int listenfd = -1;
-    SYSCALL(listenfd, socket(AF_UNIX, SOCK_STREAM, 0), "socket");
-
-    struct sockaddr_un serv_addr;
-    memset(&serv_addr, '\0', sizeof(serv_addr));
-    serv_addr.sun_family = AF_UNIX;
-    strncpy(serv_addr.sun_path, SOCKNAME, strlen(SOCKNAME) + 1);
-
-    int notused;
-    SYSCALL(notused, bind(listenfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)), "bind");
-    SYSCALL(notused, listen(listenfd, MAXBACKLOG), "listen");
-    int connfd = -1;
-    while (1) 
-    {
-        if ((connfd = accept(listenfd, (struct sockaddr *)NULL, NULL)) == -1 && errno == EINTR) 
-        {
-            perror("accept");
-        }
-        
-        if (received == 0)
-            spawn_thread(connfd);
-        else 
-        {
-            fprintf(stderr,
-                    "\n--------Ricevuto segnale--------\n\
-                Clienti connessi: %d\n\
-                Oggetti store: %d\n\
-                Size totale store: %ld\n\n\n",
-                    n_client + 1, n_items, total_size);
-            received = 0;
-        }
-    }
-
-    sleep(10);
-    
-    unlink(SOCKNAME);
-    return 0;
+    // print_thread_error(connfd, "FATAL ERROR\n");
 }

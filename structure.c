@@ -1,10 +1,8 @@
-#include "client.h"
+#include "structure.h"
 
 // mutex global variable
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 client_t *connected_client;
-
-char *err_message;
 
 int n_client = 0;
 int n_items = 0;

@@ -1,5 +1,5 @@
-#ifndef THREADPOOL_H_
-#define THREADPOOL_H_
+#ifndef CLIENT_H_
+#define CLIENT_H_
 
 #include "connection.h"
 #include "utils.h"
@@ -19,4 +19,4 @@ client_t *client_init(long fd);
 client_t *client_add(client_t *client, char *name);
 void client_remove(client_t *client);
 
-#endif /* THREADPOOL_H_ */
+#endif /* CLIENT_H_ */

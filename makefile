@@ -32,11 +32,11 @@ LDFLAGS 	= -L.
 OPTFLAGS	= -g -O3 
 LIBS        	= -pthread -lm
 
-TARGETS		= objstore_server	 \
-			objstore_client	 \
+TARGETS		= oserver	 \
+			oclient	\
 			testout.log
 
-.PHONY: all clean cleanall test
+.PHONY: all clean cleandata cleanall test
 .SUFFIXES: .c .h
 
 %: %.c
@@ -44,25 +44,20 @@ TARGETS		= objstore_server	 \
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) -c -o $@ $<
-
+	
 all		: $(TARGETS)
 
 libAccess.a: access.o access.h
 	$(AR) $(ARFLAGS) $@ $<
 
-libClient.a: client.o client.h
-	$(AR) $(ARFLAGS) $@ $<
-
 libUtils.a: utils.o utils.h
 	$(AR) $(ARFLAGS) $@ $<
 	
-objstore_client: objstore_client.o libAccess.a 
+oclient: oclient.o libAccess.a 
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 	
-objstore_server: objstore_server.o libClient.a libUtils.a #threadF.o
+oserver: oserver.o structure.o threadF.o libUtils.a 
 	$(CC) $(CFLAGS) $(INCLUDES) $(OPTFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-#threadF.o: connection.h threadF.h
 	
 clean		: 
 	rm -f $(TARGETS)
@@ -71,7 +66,7 @@ cleandata	:
 	rm -f -r data
 	
 cleanall	: clean cleandata
-	rm -f -r *.o *.a 
+	rm -f -r *.o *.a *.sock
 test		:
 	> testout.log
 	bash looptest.sh
