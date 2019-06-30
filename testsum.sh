@@ -57,5 +57,5 @@ if [ $nt1 == 1000 ] && [ $nt2 == 30 ] && [ $nt3 == 20 ] ; #[ $nclient == 100 ] &
         echo "Test fallito"
 fi
 #eseguo la signal sul server
-BPID="$(pidof objstore_server)"
+BPID="$(pidof oserver)"
 kill -SIGUSR1 $BPID      

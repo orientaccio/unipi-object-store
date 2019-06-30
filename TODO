@@ -1,14 +1,9 @@
 DEBUG while(nReadLeft > 0) in acces->os_retrieve
-DEBUG server->retrieve di dato non esistente
-DEBUG server->delete dato non esistente
 DEBUG memory leak
 DEBUG gestione server chiuso e riaperto e client rimasto aperto
-DEBUG snfprintf occorre fare free delle altre variabili?
 
-TODO gestione printing SOLO sul server/client no librerie
-TODO gestione thread mutex return
-TODO gestione ritorno delle malloc
+TODO fix counter add and remove items size (STORE, REMOVE server)
 TODO gestione segnali
-TODO scegliere quando fare return null su manage request
+TODO manage request KO message for all commands
 
 TODO cleanup_handler

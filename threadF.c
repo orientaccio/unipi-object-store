@@ -56,9 +56,6 @@ client_t *manage_request(char *buf, client_t *client)
             long file_length = strtol(file_len, NULL, 10);
             long first_read_len = strlen(file_data);
             FILE *fp1;
-
-            fprintf(stderr, "file_name: %s\n", file_name);
-            fprintf(stderr, "file_path: %s\n", file_path);
             
             CHECKNULL(fp1, fopen(file_path, "w"), EOPEN);
             if (fp1 == NULL) 
@@ -84,7 +81,7 @@ client_t *manage_request(char *buf, client_t *client)
                 left_read_len--;
             }
 
-            // add file length
+            // add file
             total_size += file_length;
             n_items++;
 
@@ -99,12 +96,12 @@ client_t *manage_request(char *buf, client_t *client)
             char *file_path = get_file_path(file_name, client->name);
             
             FILE *fpr;
-            CHECKNULL(fpr, fopen(file_path, "r"), EOPEN);
-
-            if (fpr == NULL) 
+            if ((fpr = fopen(file_path, "r")) == NULL) 
             {
+                err_message = "file not exists";
                 int error_len = strlen("KO \n") + strlen(err_message) + 2;
-                char *message = (char *)malloc(error_len * sizeof(char));
+                char *message;
+                CHECKNULL(message, (char *)malloc(error_len * sizeof(char)), "malloc");
                 snprintf(message, error_len, "KO %s \n", err_message);
                 SYSCALL(result, write(client->fd, message, error_len * sizeof(char)), "retrieve write error");
                 
@@ -118,9 +115,10 @@ client_t *manage_request(char *buf, client_t *client)
             long file_size = st.st_size;
 
             // read the file and prepare data message
-            char *data = (char *)malloc(file_size * sizeof(char) + 1);
-            char out;
             int counter = 0;
+            char out;
+            char *data;
+            CHECKNULL(data, (char *)malloc(file_size * sizeof(char) + 1), "malloc");
             
             while ((out = fgetc(fpr)) != EOF) 
                 data[counter++] = (char)out;
@@ -129,11 +127,13 @@ client_t *manage_request(char *buf, client_t *client)
             // prepare response message
             long data_len = strlen(data);
             int n_digits = log10(data_len) + 1;
-            char *snum = (char *)malloc((n_digits + 1) * sizeof(char));
+            char *snum;
+            CHECKNULL(snum, (char *)malloc((n_digits + 1) * sizeof(char)), "malloc");
             sprintf(snum, "%ld", data_len);
 
             long response_len = strlen("DATA") + strlen(snum) + strlen(data) + 4 + 1;
-            char *response = (char *)malloc(response_len * sizeof(char));
+            char *response;
+            CHECKNULL(response, (char *)malloc(response_len * sizeof(char)), "malloc");
             snprintf(response, response_len, "DATA %s \n %s", snum, data);
 
             fprintf(stderr, "Reponse message: %s\n", response);
@@ -182,8 +182,9 @@ client_t *manage_request(char *buf, client_t *client)
 void *threadF(void *arg) 
 {
     long connfd = (long)arg;
+    char *buffer;
     client_t *client = client_init(connfd);
-    char *buffer = (char *) malloc(sizeof(char) * BUFSIZE);
+    CHECKNULL(buffer, (char *) malloc(sizeof(char) * BUFSIZE), "malloc");
     int result = -1;
 
     do 
@@ -192,6 +193,7 @@ void *threadF(void *arg)
         SYSCALL(result, read(connfd, buffer, BUFSIZE), "errore lettura thread F");
         if (result < 1) 
             break;
+        
         // DEBUG_BUFFER(buffer, result);
         client = manage_request(buffer, client);
         if (client == NULL) 
@@ -200,8 +202,8 @@ void *threadF(void *arg)
         fprintf(stderr, "Thread F: %s %d \n", client->name, result);
     } 
     while (1);
+    
     free(buffer);
-
     client_remove(client);
     close(connfd);
     pthread_exit("thread closed.\n");
@@ -237,7 +239,6 @@ void spawn_thread(long connfd)
         return;
     }
     
-    // set the thread in detached mode
     if (pthread_attr_setdetachstate(&thattr, PTHREAD_CREATE_DETACHED) != 0) 
     {
         fprintf(stderr, "pthread_attr_setdetachstate FALLITA\n");

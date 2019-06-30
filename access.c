@@ -6,13 +6,13 @@ static int sockfd;
 char buffer[BUFSIZE];
 char *message_error;
 
-int startcmp(char* str1, char* str2) 
+int startcmp(char *str1, char *str2) 
 {
     if (str1 == NULL || str2 == NULL) return 0;
     return (str1[0] == str2[0]);
 }
 
-int os_connect(char* name) 
+int os_connect(char *name) 
 {
     // socket creation
     SYSCALL(sockfd, socket(AF_UNIX, SOCK_STREAM, 0), "socket");
@@ -26,9 +26,10 @@ int os_connect(char* name)
         return 0;
 
     // message creation protocol
-    char* type = "REGISTER";
-    int message_len = sizeof(char) * (strlen(name) + strlen(type) + 3);  // 3 is for space and \n
-    char* message = (char*) malloc(message_len);
+    char *message;
+    char *type = "REGISTER";
+    int message_len = sizeof(char) * (strlen(name) + strlen(type) + 3);
+    CHECKNULL(message, (char*) malloc(message_len), "malloc");
     snprintf(message, message_len, "%s %s \n", type, name);
     
     // send message
@@ -37,8 +38,8 @@ int os_connect(char* name)
     free(message);
     
     // response message check
-    char* saveptr;
-    char* command = strtok_r(buffer, " ", &saveptr);
+    char *saveptr;
+    char *command = strtok_r(buffer, " ", &saveptr);
     
     if (startcmp(command, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
@@ -50,19 +51,20 @@ int os_connect(char* name)
     return 0;
 }
 
-int os_store(char* name, void* block, size_t len) 
+int os_store(char *name, void *block, size_t len) 
 {
     // string to contain data
     long data_len = (long)len;
     int data_len_n = log10(data_len) + 1;
-    char* data_len_s = (char*) malloc((data_len_n + 1) * sizeof(char));
+    char *data_len_s;
+    CHECKNULL(data_len_s, (char*) malloc((data_len_n + 1) * sizeof(char)), "malloc");
     sprintf(data_len_s, "%ld", data_len);
 
     // message creation protocol
-    char* message;
-    char* type = "STORE";
+    char *message;
+    char *type = "STORE";
     long message_len = sizeof(char) * (strlen(type) + data_len + strlen(name) + strlen(data_len_s) + 5 + 1);  
-    message = (char*) malloc(message_len);
+    CHECKNULL(message, (char*) malloc(message_len), "malloc");
     snprintf(message, message_len, "%s %s %s \n %s", type, name, data_len_s, (char*)block);
 
     // send message
@@ -74,8 +76,8 @@ int os_store(char* name, void* block, size_t len)
     free(data_len_s);
     
     // response message check
-    char* saveptr;
-    char* command = strtok_r(buffer, " ", &saveptr);
+    char *saveptr;
+    char *command = strtok_r(buffer, " ", &saveptr);
     
     if (startcmp(command, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
@@ -83,12 +85,13 @@ int os_store(char* name, void* block, size_t len)
     return (startcmp(command, "OK"));
 }
 
-void* os_retrieve(char* name) 
+void *os_retrieve(char *name) 
 {
     // message creation protocol
-    char* type = "RETRIEVE";
+    char *message;
+    char *type = "RETRIEVE";
     long message_len = sizeof(char) * (strlen(type) + strlen(name) + 3);
-    char* message = (char*) malloc((message_len) * sizeof(char));
+    CHECKNULL(message, (char*) malloc((message_len) * sizeof(char)), "malloc");
     snprintf(message, message_len, "%s %s \n", type, name);
 
     // write & read message
@@ -98,20 +101,21 @@ void* os_retrieve(char* name)
     free(message);
     
     // response message check
-    char* saveptr;
-    char* command = strtok_r(buffer, " ", &saveptr);
+    char *saveptr;
+    char *command = strtok_r(buffer, " ", &saveptr);
     
     if (strcmp(command, "DATA") == 0) 
     {
         // Prendo le informazioni dall'Header
-        char* data_len = strtok_r(NULL, " ", &saveptr);
-        char* fileData = strtok_r(NULL, " \n", &saveptr);
+        char *data_len = strtok_r(NULL, " ", &saveptr);
+        char *fileData = strtok_r(NULL, " \n", &saveptr);
         
         long lenFirstRead = strlen(fileData);
         long fileLength = strtol(data_len, NULL, 10);
         long nReadLeft = (long)ceil((double)(fileLength - lenFirstRead) / BUFSIZE);
 
-        char* data = (char*) malloc(sizeof(char) * (fileLength + 1));
+        char *data;
+        CHECKNULL(data, (char*) malloc(sizeof(char) * (fileLength + 1)), "malloc");
         // fileLength+1 o scoppia tutto
         int cx = snprintf(data, fileLength + 1, "%s", fileData);
 
@@ -133,12 +137,13 @@ void* os_retrieve(char* name)
     return NULL;
 }
 
-int os_delete(char* name) 
+int os_delete(char *name) 
 {
     // message creation protocol
-    char* type = "DELETE";
+    char *message;
+    char *type = "DELETE";
     long message_len = sizeof(char) * (strlen(type) + strlen(name) + 3);
-    char* message = (char*)malloc((message_len) * sizeof(char));
+    CHECKNULL(message, (char*)malloc((message_len) * sizeof(char)), "malloc");
     snprintf(message, message_len, "%s %s \n", type, name);
 
     // write & read message
@@ -148,8 +153,8 @@ int os_delete(char* name)
     free(message);
 
     // response message check
-    char* saveptr;
-    char* command = strtok_r(buffer, " ", &saveptr);
+    char *saveptr;
+    char *command = strtok_r(buffer, " ", &saveptr);
     
     if (startcmp(command, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
@@ -160,9 +165,10 @@ int os_delete(char* name)
 int os_disconnect() 
 {
     // message creation protocol
-    char* type = "LEAVE";
+    char *message;
+    char *type = "LEAVE";
     long message_len = sizeof(char) * (strlen(type) + 3);
-    char* message = (char*)malloc((message_len) * sizeof(char));
+    CHECKNULL(message, (char*)malloc((message_len) * sizeof(char)), "malloc");
     snprintf(message, message_len, "%s \n", type);
 
     // write & read message

@@ -1,6 +1,6 @@
 /**
- * @file utils.h
- * @brief utility macros - functions
+ *@file utils.h
+ *@brief utility macros - functions
  */
 
 #if !defined(UTILS_H_)
@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
+#include <errno.h>
 
 #define DEBUG 0
 #define debug_fprintf(fmt, ...) \
@@ -21,13 +22,27 @@
 #define CHECKNULL(r, c, e) \
     if ((r = c) == NULL) { perror(e); exit(errno); }
 
-#define MUTEXCALL(r, c, e) \
-    if ((r = c) != 0) { perror(e); }   
-    
 #define CHECKZERO(r, c, e) \
     if ((r = c) == 0) { perror(e); }
-
+    
+#define MUTEXCALL(c, e) \
+    if (c != 0) { perror(e); exit(errno); }
+    
+/**
+ *@function get_dir_path
+ *@brief get the path of the directory
+ *@param name of the directory
+ *@return NULL if name = NULL else the directory's path  
+ */
 char *get_dir_path(char *name);
+
+/**
+ *@function get_file_path
+ *@brief get the path of the file in a directory
+ *@param file_name is the file's name
+ *@param name is the directory's name
+ *@return NULL if name = NULL else the file_name's path  
+ */
 char *get_file_path(char *file_name, char *name);
     
 #endif

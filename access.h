@@ -1,11 +1,13 @@
+/**
+ * @file access.h
+ * @brief functions used by the client to access on the server
+ */
+
 #if !defined(ACCESS_H_)
 #define ACCESS_H_
-
 #include <stddef.h>
 #include "connection.h"
 #include "utils.h"
-
-#define MAXNAMELEN 32
 
 /**
  * @function os_connect

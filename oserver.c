@@ -2,75 +2,11 @@
 
 volatile sig_atomic_t received = 0;
 
-void gestore() 
-{ 
-    received = 1; 
-}
-
-void signal_manager() 
-{
-    struct sigaction sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = gestore;
-    // sa.sa_flags = ERESTART;
-
-    int notused;
-    /*
-     * change SIGTSTP to SIGUSR1
-    
-     * */
-    SYSCALL(notused, sigaction(SIGUSR1, &sa, NULL), "sigaction");
-}
-
-int is_dot(const char dir[]) 
-{
-    int l = strlen(dir);
-
-    if ((l > 0 && dir[l - 1] == '.')) 
-        return 1;
-    return 0;
-}
-
-void count_items(char *nomedir) 
-{
-    DIR *dir;
-    if ((dir = opendir(nomedir)) == NULL) 
-    {
-        perror("opendir");
-        return;
-    }
-
-    struct dirent *file;
-
-    while ((file = readdir(dir)) != NULL) 
-    {
-        struct stat statbuf;
-        char filename[512];
-        strncpy(filename, nomedir, strlen(nomedir) + 1);
-        strncat(filename, "/", 2);
-        strncat(filename, file->d_name, strlen(file->d_name) + 1);
-
-        if (is_dot(filename)) 
-            continue;
-
-        if (stat(filename, &statbuf) == -1) 
-        {
-            perror("stat error");
-            return;
-        }
-
-        // recursive print if file is a directory
-        if (S_ISDIR(statbuf.st_mode))
-            count_items(filename);
-        else 
-        {
-            n_items++;
-            total_size += statbuf.st_size;
-        }
-    }
-
-    closedir(dir);
-}
+int is_dot(const char dir[]);
+void count_items(char *dir_name);
+void print_status();
+void signal_manager();
+void signal_handler();
 
 int main(int argc, char *argv[]) 
 {
@@ -96,24 +32,89 @@ int main(int argc, char *argv[])
     
     while (1) 
     {
-        if ((connfd = accept(listenfd, (struct sockaddr *)NULL, NULL)) == -1 && errno == EINTR) 
-        {
+        if ((connfd = accept(listenfd, (struct sockaddr *)NULL, NULL)) == -1 && errno == EINTR && received == 0) 
             perror("accept");
-        }
         
-        if (received == 0)
-            spawn_thread(connfd);
-        else 
+        if (received == 1)
         {
-            fprintf(stderr,
-                    "\n--------Ricevuto segnale--------\n\
-                Clienti connessi: %d\n\
-                Oggetti store: %d\n\
-                Size totale store: %ld\n\n\n",
-                    n_client + 1, n_items, total_size);
+            print_status();
             received = 0;
         }
+        else
+            spawn_thread(connfd);
     }
     unlink(SOCKNAME);
     return 0;
+}
+
+void signal_manager() 
+{
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = signal_handler;
+    // sa.sa_flags = ERESTART;
+
+    int notused;
+    SYSCALL(notused, sigaction(SIGUSR1, &sa, NULL), "sigaction");
+}
+
+void signal_handler() 
+{ 
+    received = 1; 
+}
+
+int is_dot(const char dir[]) 
+{
+    int l = strlen(dir);
+
+    if ((l > 0 && dir[l - 1] == '.')) 
+        return 1;
+    return 0;
+}
+
+void count_items(char *dir_name) 
+{    
+    // open directory
+    DIR *dir;
+    CHECKNULL(dir, opendir(dir_name), "opendir");
+
+    struct dirent *file;
+    while ((file = readdir(dir)) != NULL) 
+    {
+        struct stat statbuf;
+        char filename[512];
+        strncpy(filename, dir_name, strlen(dir_name) + 1);
+        strncat(filename, "/", 2);
+        strncat(filename, file->d_name, strlen(file->d_name) + 1);
+
+        if (is_dot(filename)) 
+            continue;
+
+        if (stat(filename, &statbuf) == -1) 
+        {
+            perror("stat error");
+            return;
+        }
+
+        // recursive count if the file is a directory
+        if (S_ISDIR(statbuf.st_mode))
+            count_items(filename);
+        else 
+        {
+            n_items++;
+            total_size += statbuf.st_size;
+        }
+    }
+
+    closedir(dir);
+}
+
+void print_status()
+{
+    fprintf(stderr,
+        "\nCURRENT SERVER STATUS ==============\n\
+    Clients online: %d\n\
+    Items stored: %d\n\
+    Storage size: %ld\n\n",
+        n_client, n_items, total_size);
 }

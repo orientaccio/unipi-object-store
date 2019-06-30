@@ -10,23 +10,23 @@ int op_success = 0;
 void test1();
 void test2();
 void test3();
-void check_args(int argc, char* argv[]);
+void check_args(int argc, char *argv[]);
 void debug_menu();
 
-int main(int argc, char* argv[]) 
+int main(int argc, char *argv[]) 
 {
     check_args(argc, argv);
-    debug_fprintf("%s\n\n", "===== TEST MODE =====");
+    debug_fprintf("%s\n\n", "TEST MODE ===============");
     
     // enstablish the connection
     int res;
-    char* username = argv[1];
+    char *username = argv[1];
     CHECKZERO(res, os_connect(username), "connection error");
     if (res == 0) 
         exit(EXIT_FAILURE);
 
     // debug mode - test single requests
-    if (argc == 2)
+    if (DEBUG)
         while (1)
             debug_menu();
     
@@ -44,14 +44,16 @@ int main(int argc, char* argv[])
         default:
             break;
     }
-    fprintf(stderr,
-            "\n--------Risultati test--------\n\
-            Operations total: %d\n\
-            Operations success: %d\n\
-            Operations failed: %d\n\n",
-            op_tot, op_success, op_fail);
     
-    CHECKZERO(res, os_disconnect(), "Error LEAVE");
+    // print results
+    fprintf(stderr,
+            "\nOPERATIONS RESULTS ===============\n\
+            Operations success: %d\n\
+            Operations failed: %d\n\
+            Operations total: %d\n\n",
+            op_success, op_fail, op_tot);
+    
+    CHECKZERO(res, os_disconnect(), "disconnect error");
     return 0;
 }
 
@@ -59,7 +61,8 @@ void test1()
 {
     char data_name[3];
     char data_sing[5] = "bello";
-    char* data = (char*)malloc(sizeof(char) * START_SIZE);
+    char *data;
+    CHECKNULL(data, (char*)malloc(sizeof(char) * START_SIZE), "malloc");
     int res, i = 0;
 
     for (i = 0; i < 20; i++) 
@@ -85,9 +88,9 @@ void test1()
 
 void test2() 
 {
-    char* data_name = "test2";
-    char* data_store = "bello";
-    char* data_retrieve;
+    char *data_name = "test2";
+    char *data_store = "bello";
+    char *data_retrieve;
     int res;
     CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), "Error STORE");
     CHECKZERO(data_retrieve, (char*)os_retrieve(data_name), "Error Retrieve");
@@ -108,8 +111,8 @@ void test2()
 
 void test3() 
 {
-    char* data_name = "test3";
-    char* data_store = "bello";
+    char *data_name = "test3";
+    char *data_store = "bello";
     int res;
     CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), "Error STORE");
     CHECKZERO(res, os_delete(data_name), "Error DELETE");
@@ -126,7 +129,7 @@ void test3()
     fprintf(stderr, "Test3 OK\n");
 }
 
-void check_args(int argc, char* argv[]) 
+void check_args(int argc, char *argv[]) 
 {
     if (argc == 1) 
     {
@@ -157,7 +160,7 @@ void debug_menu()
                 3)DELETE\n\
                 4)LEAVE\n");
     char dataName[33];
-    char* data;
+    char *data;
     int scelta;
     int res;
     scanf("%d", &scelta);
