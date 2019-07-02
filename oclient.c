@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
 
     // debug mode - test single requests
-    if (DEBUG)
+    if (argc == 2)
         while (1)
             debug_menu();
     
@@ -62,17 +62,18 @@ void test1()
     char data_name[3];
     char data_sing[5] = "bello";
     char *data;
-    CHECKNULL(data, (char*)malloc(sizeof(char) * START_SIZE), "malloc");
+    CHECKNULL(data, (char*)malloc(sizeof(char) * START_SIZE), EMALLOC);
     int res, i = 0;
 
     for (i = 0; i < 20; i++) 
     {
         op_tot++;
         long current_size = START_SIZE + i * INC_SIZE;
-        data = realloc(data, (sizeof(char) * current_size));
-
+        data = realloc(data, (sizeof(char) * (current_size + 1)));
+        sprintf(data, "%s", data_sing);
         sprintf(data_name, "%d", i);
-        while (current_size - strlen(data) > 0) {
+        while (current_size - strlen(data) > 0) 
+        {
             sprintf(data + strlen(data), "%s", data_sing);
         }
 
@@ -93,7 +94,7 @@ void test2()
     char *data_retrieve;
     int res;
     CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), "Error STORE");
-    CHECKZERO(data_retrieve, (char*)os_retrieve(data_name), "Error Retrieve");
+    CHECKZERO(data_retrieve, (char *)os_retrieve(data_name), "Error Retrieve");
     op_tot++;
     
     if (strcmp(data_retrieve, data_store) == 0) 
@@ -143,7 +144,10 @@ void check_args(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     
-    int n_test = (int)strtol(argv[2], NULL, 10);
+    int n_test;
+    if (argc > 2)
+        n_test = (int)strtol(argv[2], NULL, 10);
+    
     if (argc > 2 && (n_test > 3 || n_test < 1)) 
     {
         fprintf(stderr, "test number must be 1 <= n <= 3");

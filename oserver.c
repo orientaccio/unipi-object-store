@@ -14,7 +14,6 @@ int main(int argc, char *argv[])
     if (mkdir("data", 0777) == -1 && errno != EEXIST) 
         exit(1);
 
-    count_items("data");
     signal_manager();
 
     int listenfd = -1;
@@ -111,6 +110,10 @@ void count_items(char *dir_name)
 
 void print_status()
 {
+    n_items = 0;
+    total_size = 0;
+    count_items("data");
+    
     fprintf(stderr,
         "\nCURRENT SERVER STATUS ==============\n\
     Clients online: %d\n\

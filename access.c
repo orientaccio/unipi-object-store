@@ -15,35 +15,37 @@ int startcmp(char *str1, char *str2)
 int os_connect(char *name) 
 {
     // socket creation
-    SYSCALL(sockfd, socket(AF_UNIX, SOCK_STREAM, 0), "socket");
+    SYSCALL(sockfd, socket(AF_UNIX, SOCK_STREAM, 0), ESOCKET);
     serv_addr.sun_family = AF_UNIX;
     strncpy(serv_addr.sun_path, SOCKNAME, strlen(SOCKNAME) + 1);
 
     // socket connection
     int notused;
-    SYSCALL(notused, connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), "connect");
+    SYSCALL(notused, connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)), EREGISTER);
     if (notused != 0) 
         return 0;
 
     // message creation protocol
-    char *message;
-    char *type = "REGISTER";
-    int message_len = sizeof(char) * (strlen(name) + strlen(type) + 3);
-    CHECKNULL(message, (char*) malloc(message_len), "malloc");
-    snprintf(message, message_len, "%s %s \n", type, name);
+    msg_t request;
+    char *command = "REGISTER";
+    request.len = strlen(name) + strlen(command) + 3;
+    CHECKNULL(request.str, (char*) calloc(request.len, sizeof(char)), EMALLOC);
+    snprintf(request.str, request.len, "%s %s \n", command, name);
     
     // send message
-    SYSCALL(notused, write(sockfd, message, message_len), "write");
-    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), "read");
-    free(message);
+    SYSCALL(notused, write(sockfd, request.str, request.len), EWRITE);
+    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
+    free(request.str);
+    
+    fprintf(stderr, "%s\n", buffer);
     
     // response message check
     char *saveptr;
-    char *command = strtok_r(buffer, " ", &saveptr);
+    char *commandr = strtok_r(buffer, " ", &saveptr);
     
-    if (startcmp(command, "KO")) 
+    if (startcmp(commandr, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
-    if (startcmp(command, "OK")) 
+    if (startcmp(commandr, "OK")) 
         return 1;
 
     // error
@@ -57,81 +59,80 @@ int os_store(char *name, void *block, size_t len)
     long data_len = (long)len;
     int data_len_n = log10(data_len) + 1;
     char *data_len_s;
-    CHECKNULL(data_len_s, (char*) malloc((data_len_n + 1) * sizeof(char)), "malloc");
+    CHECKNULL(data_len_s, (char*) malloc((data_len_n + 1) * sizeof(char)), EMALLOC);
     sprintf(data_len_s, "%ld", data_len);
 
     // message creation protocol
-    char *message;
-    char *type = "STORE";
-    long message_len = sizeof(char) * (strlen(type) + data_len + strlen(name) + strlen(data_len_s) + 5 + 1);  
-    CHECKNULL(message, (char*) malloc(message_len), "malloc");
-    snprintf(message, message_len, "%s %s %s \n %s", type, name, data_len_s, (char*)block);
+    msg_t request;
+    char *command = "STORE";
+    request.len = sizeof(char) * (strlen(command) + data_len + strlen(name) + strlen(data_len_s) + 5 + 1);  
+    CHECKNULL(request.str, (char *) calloc(request.len, sizeof(char)), EMALLOC);
+    snprintf(request.str, request.len, "%s %s %s \n %s", command, name, data_len_s, (char *)block);
 
     // send message
     int notused;
-    SYSCALL(notused, write(sockfd, message, message_len), "write");
-    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), "read");
+    SYSCALL(notused, write(sockfd, request.str, request.len), EWRITE);
+    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     
-    free(message);
+    free(request.str);
     free(data_len_s);
     
     // response message check
     char *saveptr;
-    char *command = strtok_r(buffer, " ", &saveptr);
+    char *commandr = strtok_r(buffer, " ", &saveptr);
     
-    if (startcmp(command, "KO")) 
+    if (startcmp(commandr, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
     
-    return (startcmp(command, "OK"));
+    return (startcmp(commandr, "OK"));
 }
 
 void *os_retrieve(char *name) 
 {
     // message creation protocol
-    char *message;
-    char *type = "RETRIEVE";
-    long message_len = sizeof(char) * (strlen(type) + strlen(name) + 3);
-    CHECKNULL(message, (char*) malloc((message_len) * sizeof(char)), "malloc");
-    snprintf(message, message_len, "%s %s \n", type, name);
+    msg_t request;
+    char *command = "RETRIEVE";
+    request.len = (strlen(command) + strlen(name) + 3);
+    CHECKNULL(request.str, (char*) calloc(request.len, sizeof(char)), EMALLOC);
+    snprintf(request.str, request.len, "%s %s \n", command, name);
 
     // write & read message
     int notused;
-    SYSCALL(notused, write(sockfd, message, message_len * sizeof(char)), "write");
-    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), "read");
-    free(message);
+    SYSCALL(notused, write(sockfd, request.str, request.len * sizeof(char)), EWRITE);
+    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
+    free(request.str);
     
     // response message check
     char *saveptr;
-    char *command = strtok_r(buffer, " ", &saveptr);
+    char *commandr = strtok_r(buffer, " ", &saveptr);
     
-    if (strcmp(command, "DATA") == 0) 
+    if (strcmp(commandr, "DATA") == 0) 
     {
-        // Prendo le informazioni dall'Header
         char *data_len = strtok_r(NULL, " ", &saveptr);
-        char *fileData = strtok_r(NULL, " \n", &saveptr);
+        char *file_data = strtok_r(NULL, " \n", &saveptr);
         
-        long lenFirstRead = strlen(fileData);
-        long fileLength = strtol(data_len, NULL, 10);
-        long nReadLeft = (long)ceil((double)(fileLength - lenFirstRead) / BUFSIZE);
+        long first_read_len = strlen(file_data);
+        long file_len = strtol(data_len, NULL, 10);
+        long n_read = (long) ceilf((file_len - first_read_len) / BUFSIZE);
 
         char *data;
-        CHECKNULL(data, (char*) malloc(sizeof(char) * (fileLength + 1)), "malloc");
-        // fileLength+1 o scoppia tutto
-        int cx = snprintf(data, fileLength + 1, "%s", fileData);
+        CHECKNULL(data, (char *) malloc(sizeof(char) * (file_len + 1)), EMALLOC);
+        // file_len+1 o scoppia tutto
+        int cx = snprintf(data, file_len + 1, "%s", file_data);
 
-        while (nReadLeft > 0) 
+        while (n_read > 0) 
         {
             memset(buffer, '\0', BUFSIZE);
             
-            SYSCALL(notused, read(sockfd, buffer, BUFSIZE), "errore lettura");
-            cx += snprintf(data + cx, fileLength - cx, "%s", fileData);
-            nReadLeft--;
+            SYSCALL(notused, read(sockfd, buffer, BUFSIZE), EREAD);
+            cx += snprintf(data + cx, file_len - cx, "%s", file_data);
+            n_read--;
         }
 
         return data;
     }
     
-    if (startcmp(command, "KO")) 
+    if (startcmp(commandr, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
 
     return NULL;
@@ -140,42 +141,42 @@ void *os_retrieve(char *name)
 int os_delete(char *name) 
 {
     // message creation protocol
-    char *message;
-    char *type = "DELETE";
-    long message_len = sizeof(char) * (strlen(type) + strlen(name) + 3);
-    CHECKNULL(message, (char*)malloc((message_len) * sizeof(char)), "malloc");
-    snprintf(message, message_len, "%s %s \n", type, name);
+    msg_t request;
+    char *command = "DELETE";
+    request.len = sizeof(char) * (strlen(command) + strlen(name) + 3);
+    CHECKNULL(request.str, (char *) calloc(request.len, sizeof(char)), EMALLOC);
+    snprintf(request.str, request.len, "%s %s \n", command, name);
 
     // write & read message
     int notused;
-    SYSCALL(notused, write(sockfd, message, message_len * sizeof(char)), "write");
-    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), "read");
-    free(message);
+    SYSCALL(notused, write(sockfd, request.str, request.len * sizeof(char)), EWRITE);
+    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
+    free(request.str);
 
     // response message check
     char *saveptr;
-    char *command = strtok_r(buffer, " ", &saveptr);
+    char *commandr = strtok_r(buffer, " ", &saveptr);
     
-    if (startcmp(command, "KO")) 
+    if (startcmp(commandr, "KO")) 
         message_error = strtok_r(NULL, "\n", &saveptr);
     
-    return (startcmp(command, "OK"));
+    return (startcmp(commandr, "OK"));
 }
 
 int os_disconnect() 
 {
     // message creation protocol
-    char *message;
-    char *type = "LEAVE";
-    long message_len = sizeof(char) * (strlen(type) + 3);
-    CHECKNULL(message, (char*)malloc((message_len) * sizeof(char)), "malloc");
-    snprintf(message, message_len, "%s \n", type);
+    msg_t request;
+    char *command = "LEAVE";
+    request.len = strlen(command) + 3;
+    CHECKNULL(request.str, (char *) calloc(request.len, sizeof(char)), EMALLOC);
+    snprintf(request.str, request.len, "%s \n", command);
 
     // write & read message
     int notused;
-    SYSCALL(notused, write(sockfd, message, strlen(message) * sizeof(char)), "write");
-    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), "read");
-    free(message);
+    SYSCALL(notused, write(sockfd, request.str, strlen(request.str) * sizeof(char)), EWRITE);
+    SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
+    free(request.str);
 
     // response message check
     if (startcmp(buffer, "OK")) 

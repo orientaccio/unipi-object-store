@@ -23,7 +23,16 @@
 #define MAXBACKLOG 32
 #define MAXNAMELEN 32
 #define BUFSIZE 512
-    
-#define EOPEN "Error opening the file."
-       
+
+#define EINVALID    "Error invalid operation" 
+#define EREGISTER   "Error registration"
+#define ESTORE      "Error store"
+#define ERETRIEVE   "Error retrieve"
+#define EDELETE     "Error delete"
+
+typedef struct msg {
+    long len;
+    char *str;
+} msg_t;
+
 #endif

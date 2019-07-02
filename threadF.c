@@ -2,12 +2,31 @@
 
 char *err_message;
 
-void DEBUG_BUFFER(char *buffer, int result) 
+void send_message(client_t *client, char *header, char *message)
 {
-    fprintf(stderr, "BUFFER:{");
-    for (int i = 0; i < 512; i++) 
-        fprintf(stderr, "%c", buffer[i]);
-    fprintf(stderr, "} %d\n", result);
+    if (client == NULL || header == NULL)
+        return;
+    
+    msg_t response;
+    int result;
+    
+    // calculate message length
+    response.len = strlen(header) + 3;
+    if (message != NULL)
+         response.len += strlen(message) + 1;
+    
+    // create response message
+    CHECKNULL(response.str, (char *) calloc(response.len, sizeof(char)), EMALLOC);
+    if (strcmp(header, "OK") == 0)
+        snprintf(response.str, response.len, "%s \n", header);
+    else
+        snprintf(response.str, response.len, "%s %s \n", header, message);
+    
+    fprintf(stderr, "Response message: %s", response.str);
+    
+    // writes
+    SYSCALL(result, write(client->fd, response.str, response.len * sizeof(char)), EWRITE);
+    free(response.str);
 }
 
 client_t *manage_request(char *buf, client_t *client) 
@@ -16,166 +35,149 @@ client_t *manage_request(char *buf, client_t *client)
     char *comand = strtok_r(buf, " ", &saveptr);
     int result;
     
-    if (client->name == NULL) 
+    //if (client->name != NULL)
+        //fprintf(stderr, "%s %s\n", client->name, comand);
+    
+    if (client->name == NULL && strcmp(comand, "REGISTER") != 0) 
     {
-        if (strcmp(comand, "REGISTER") == 0) 
-        {
-            char *user = strtok_r(NULL, " ", &saveptr);
-            client = client_add(client, user);
-            if (client == NULL) 
-            {
-                SYSCALL(result, write(client->fd, "KO \n", 5 * sizeof(char)), "register write error");
-                return NULL;
-            }
-            
-            char *path = get_dir_path(client->name);
-            if (mkdir(path, 0777) == -1 && errno != EEXIST) 
-            {
-                SYSCALL(result, write(client->fd, "KO \n", 5 * sizeof(char)), "directory creation error");
-                free(path);
-                return NULL;
-            }
-            free(path);
-            SYSCALL(result, write(client->fd, "OK \n", 5 * sizeof(char)), "errore invio");
-            // TODO on error restore previous state
-        } 
-        else {  
-            // TODO send reply incorrect request / not logged in //quit th?
-            return NULL;
-        }
-    } 
-    else 
-    {
-        if (strcmp(comand, "STORE") == 0) 
-        {
-            char *file_name = strtok_r(NULL, " ", &saveptr);
-            char *file_len = strtok_r(NULL, " ", &saveptr);
-            char *file_data = strtok_r(NULL, " \n", &saveptr);
-            char *file_path = get_file_path(file_name, client->name);
-            
-            long file_length = strtol(file_len, NULL, 10);
-            long first_read_len = strlen(file_data);
-            FILE *fp1;
-            
-            CHECKNULL(fp1, fopen(file_path, "w"), EOPEN);
-            if (fp1 == NULL) 
-            {
-                SYSCALL(result, write(client->fd, "KO \n", 5 * sizeof(char)), "file creation error");
-
-                free(file_path);
-                return client;
-            }
-
-            long left_read_len = (long) ceil((double)(file_length - first_read_len) / BUFSIZE);
-            fwrite(file_data, sizeof(char), first_read_len, fp1);
-
-            while (left_read_len > 0) 
-            {
-                memset(buf, '\0', BUFSIZE);
-
-                SYSCALL(result, read(client->fd, buf, BUFSIZE), "store read error");
-                
-                fwrite(buf, sizeof(char),
-                       (left_read_len > 1) ? sizeof(char) * BUFSIZE : sizeof(char) * ((file_length - first_read_len) % BUFSIZE),
-                       fp1);
-                left_read_len--;
-            }
-
-            // add file
-            total_size += file_length;
-            n_items++;
-
-            fclose(fp1);
-            free(file_path);
-            SYSCALL(result, write(client->fd, "OK \n", 5 * sizeof(char)), "store write error");
-        } 
-        else if (strcmp(comand, "RETRIEVE") == 0) 
-        {
-            // create pathname
-            char *file_name = strtok_r(NULL, " ", &saveptr);
-            char *file_path = get_file_path(file_name, client->name);
-            
-            FILE *fpr;
-            if ((fpr = fopen(file_path, "r")) == NULL) 
-            {
-                err_message = "file not exists";
-                int error_len = strlen("KO \n") + strlen(err_message) + 2;
-                char *message;
-                CHECKNULL(message, (char *)malloc(error_len * sizeof(char)), "malloc");
-                snprintf(message, error_len, "KO %s \n", err_message);
-                SYSCALL(result, write(client->fd, message, error_len * sizeof(char)), "retrieve write error");
-                
-                free(file_path);
-                return client;
-            }
-
-            // get file size
-            struct stat st;
-            stat(file_path, &st);
-            long file_size = st.st_size;
-
-            // read the file and prepare data message
-            int counter = 0;
-            char out;
-            char *data;
-            CHECKNULL(data, (char *)malloc(file_size * sizeof(char) + 1), "malloc");
-            
-            while ((out = fgetc(fpr)) != EOF) 
-                data[counter++] = (char)out;
-            data[counter] = '\0';
-
-            // prepare response message
-            long data_len = strlen(data);
-            int n_digits = log10(data_len) + 1;
-            char *snum;
-            CHECKNULL(snum, (char *)malloc((n_digits + 1) * sizeof(char)), "malloc");
-            sprintf(snum, "%ld", data_len);
-
-            long response_len = strlen("DATA") + strlen(snum) + strlen(data) + 4 + 1;
-            char *response;
-            CHECKNULL(response, (char *)malloc(response_len * sizeof(char)), "malloc");
-            snprintf(response, response_len, "DATA %s \n %s", snum, data);
-
-            fprintf(stderr, "Reponse message: %s\n", response);
-
-            SYSCALL(result, write(client->fd, response, response_len * sizeof(char)), "retrieve send error");
-
-            free(snum);
-            free(data);
-            free(response);
-            free(file_path);
-            fclose(fpr);
-        } 
-        else if (strcmp(comand, "DELETE") == 0) 
-        {
-            // create pathname
-            char *file_name = strtok_r(NULL, " ", &saveptr);
-            char *file_path = get_file_path(file_name, client->name);
-
-            // delete file
-            if (remove(file_path) == 0) 
-            {
-                SYSCALL(result, write(client->fd, "OK \n", 5 * sizeof(char)), "errore invio");
-            }
-            else
-            {
-                SYSCALL(result, write(client->fd, "KO \n", 5 * sizeof(char)), "errore invio");
-            }
-            
-            free(file_path);
-        } 
-        else if (strcmp(comand, "LEAVE") == 0) 
-        {
-            SYSCALL(result, write(client->fd, "OK \n", 5 * sizeof(char)), "errore invio");
-            fprintf(stderr, "%s leaves", client->name);
-            client_remove(client);
-            return NULL;
-        } 
-        else {
-            // TODO send reply incorrect request / not logged in
-            // quit thread
-        }
+        send_message(client, "KO", EINVALID);
+        return NULL;
     }
+    
+    if (strcmp(comand, "REGISTER") == 0) 
+    {
+        char *name = strtok_r(NULL, " ", &saveptr);
+        client = client_add(client, name);
+        if (client == NULL) 
+        {
+            send_message(client, "KO", EREGISTER);
+            return NULL;
+        }
+        
+        char *path = get_dir_path(client->name);
+        if (mkdir(path, 0777) == -1 && errno != EEXIST) 
+        {
+            send_message(client, "KO", EREGISTER);
+            free(path);
+            return NULL;
+        }
+    
+        fprintf(stderr, "%s %s\n", client->name, comand);
+    
+        send_message(client, "OK", NULL);
+        free(path);
+    } 
+    else if (strcmp(comand, "STORE") == 0) 
+    {
+        char *file_name = strtok_r(NULL, " ", &saveptr);
+        char *file_len = strtok_r(NULL, " ", &saveptr);
+        char *file_data1 = strtok_r(NULL, " \n", &saveptr);
+        char *file_data2 = mystrdup(file_data1);
+        char *file_path = get_file_path(file_name, client->name);
+        
+        long file_length = strtol(file_len, NULL, 10);
+        long first_read_len = strlen(file_data2);
+        FILE *fp1;
+        
+        if ((fp1 = fopen(file_path, "w")) == NULL) 
+        {
+            perror(EOPEN);
+            send_message(client, "KO", ESTORE);
+            free(file_path);
+            return client;
+        }
+
+        long n_read = (long) ceilf((file_length - first_read_len) / BUFSIZE);
+        fwrite(file_data2, sizeof(char), first_read_len, fp1);
+        
+        while (n_read > 0) 
+        {
+            memset(buf, '\0', BUFSIZE);
+            SYSCALL(result, read(client->fd, buf, BUFSIZE), EREAD);
+            int read_len = (n_read > 1) ? BUFSIZE : ((file_length - first_read_len) % BUFSIZE);
+            fwrite(buf, sizeof(char), read_len, fp1);
+            n_read--;
+        }
+
+        send_message(client, "OK", ESTORE);
+        free(file_data2);
+        free(file_path);
+        fclose(fp1);
+    } 
+    else if (strcmp(comand, "RETRIEVE") == 0) 
+    {
+        // create pathname
+        char *file_name = strtok_r(NULL, " ", &saveptr);
+        char *file_path = get_file_path(file_name, client->name);
+        
+        FILE *fpr;
+        if ((fpr = fopen(file_path, "r")) == NULL) 
+        {
+            send_message(client, "KO", ERETRIEVE);
+            free(file_path);
+            return client;
+        }
+
+        // get file size
+        struct stat st;
+        stat(file_path, &st);
+        long file_size = st.st_size;
+
+        // read the file and prepare data message
+        int counter = 0;
+        char out;
+        char *data;
+        CHECKNULL(data, (char *) malloc(file_size * sizeof(char) + 1), EMALLOC);
+        
+        while ((out = fgetc(fpr)) != EOF) 
+            data[counter++] = (char)out;
+        data[counter] = '\0';
+
+        // prepare response message
+        long data_len = strlen(data);
+        int n_digits = log10(data_len) + 1;
+        char *snum;
+        CHECKNULL(snum, (char *)malloc((n_digits + 1) * sizeof(char)), EMALLOC);
+        sprintf(snum, "%ld", data_len);
+
+        long response_len = strlen("DATA") + strlen(snum) + strlen(data) + 4 + 1;
+        char *response;
+        CHECKNULL(response, (char *)malloc(response_len * sizeof(char)), EMALLOC);
+        snprintf(response, response_len, "DATA %s \n %s", snum, data);
+
+        fprintf(stderr, "Reponse message: %s\n", "DATA");
+
+        SYSCALL(result, write(client->fd, response, response_len * sizeof(char)), "retrieve send error");
+
+        free(snum);
+        free(data);
+        free(response);
+        free(file_path);
+        fclose(fpr);
+    } 
+    else if (strcmp(comand, "DELETE") == 0) 
+    {
+        // create pathname
+        char *file_name = strtok_r(NULL, " ", &saveptr);
+        char *file_path = get_file_path(file_name, client->name);
+
+        // delete file
+        if (remove(file_path) == 0) 
+            send_message(client, "OK", NULL);
+        else
+            send_message(client, "KO", EDELETE);
+        
+        free(file_path);
+    } 
+    else if (strcmp(comand, "LEAVE") == 0) 
+    {
+        send_message(client, "OK", NULL);
+        client_remove(client);
+        return NULL;
+    } 
+//     else 
+//         send_message(client, "KO", EINVALID);
+    
     return client;
 }
 
@@ -184,7 +186,7 @@ void *threadF(void *arg)
     long connfd = (long)arg;
     char *buffer;
     client_t *client = client_init(connfd);
-    CHECKNULL(buffer, (char *) malloc(sizeof(char) * BUFSIZE), "malloc");
+    CHECKNULL(buffer, (char *) calloc(BUFSIZE + 1, sizeof(char)), EMALLOC);
     int result = -1;
 
     do 
@@ -194,12 +196,9 @@ void *threadF(void *arg)
         if (result < 1) 
             break;
         
-        // DEBUG_BUFFER(buffer, result);
         client = manage_request(buffer, client);
         if (client == NULL) 
             break;
-
-        fprintf(stderr, "Thread F: %s %d \n", client->name, result);
     } 
     while (1);
     

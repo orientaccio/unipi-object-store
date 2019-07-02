@@ -24,7 +24,7 @@ int is_connected(char *name)
 client_t *client_init(long fd) 
 {
     client_t *client;
-    CHECKNULL(client, (client_t *) malloc(sizeof(client)), "malloc");
+    CHECKNULL(client, (client_t *) malloc(sizeof(client_t)), EMALLOC);
     client->next = NULL;
     client->name = NULL;
     client->fd = fd;
@@ -48,7 +48,7 @@ client_t *client_add(client_t *client, char *name)
     if (connected_clients == NULL) 
     {
         connected_clients = client;
-        CHECKNULL(connected_clients->name, (char *) malloc(sizeof(char) * strlen(name) + 1), "malloc");
+        CHECKNULL(connected_clients->name, (char *) malloc(sizeof(char) * strlen(name) + 1), EMALLOC);
         strcpy(connected_clients->name, name);
         n_client++;
         
@@ -56,7 +56,7 @@ client_t *client_add(client_t *client, char *name)
         return connected_clients;
     }
 
-    CHECKNULL(client->name, (char *) malloc(sizeof(char) * strlen(name) + 1), "malloc");
+    CHECKNULL(client->name, (char *) malloc(sizeof(char) * strlen(name) + 1), EMALLOC);
     strcpy(client->name, name);
     
     // add to the list

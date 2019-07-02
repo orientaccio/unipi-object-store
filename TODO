@@ -1,9 +1,5 @@
-DEBUG while(nReadLeft > 0) in acces->os_retrieve
 DEBUG memory leak
 DEBUG gestione server chiuso e riaperto e client rimasto aperto
 
-TODO fix counter add and remove items size (STORE, REMOVE server)
 TODO gestione segnali
-TODO manage request KO message for all commands
-
 TODO cleanup_handler

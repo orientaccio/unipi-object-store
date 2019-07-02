@@ -11,6 +11,14 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
+
+#define ESOCKET     "Error on socket"
+#define EREAD       "Error SYSCALL read"
+#define EWRITE      "Error SYSCALL write"
+#define EMALLOC     "Error malloc"
+#define EOPEN       "Error opening the file"
+#define EDIR        "Error creating directory"
 
 #define DEBUG 0
 #define debug_fprintf(fmt, ...) \
@@ -45,4 +53,11 @@ char *get_dir_path(char *name);
  */
 char *get_file_path(char *file_name, char *name);
     
+/**
+ *@function strdup
+ *@brief duplicate string adding the \0 character
+ *@param s is the string
+ *@return NULL if s = NULL else the duplicated character
+ */
+char *mystrdup(char *s);
 #endif
