@@ -1,61 +1,75 @@
 #!/bin/bash
 filename='testout.log'
-nt1=0
-nt1Idedali=1000
-nt2=0
-nt2Idedali=30
-nt3=0
-nt3Idedali=20
+
+#counters
+test1_counter=0
+test2_counter=0
+test3_counter=0
+#limits
+test1_max=1000
+test2_max=30
+test3_max=20
+
 nclient=0
-tipo=0
+test_n=0
 n=1
-while read line; do
-if [ -n "$line" ];
-    then
+
+while read line; 
+do
+    if [ -n "$line" ]; then
         if [ "$line" == "Start Test 1" ] ;
-            then    tipo=1
+            then    test_n=1
         fi
         if [ "$line" == "Start Test 2" ] ;
-                then    tipo=2
+                then    test_n=2
         fi
         if [ "$line" == "Start Test 3" ] ;
-                    then     tipo=3
+                    then     test_n=3
         fi
-        #caso di test che sto calcolando
-        case "$tipo" in
+        
+        # switch case
+        case "$test_n" in
             1)  if [ "$line" == "RESPONSE: OK" ]; then
-                    nt1=$((nt1+1))
+                    test1_counter=$((test1_counter + 1))
                 fi
                 ;;
             2) if [ "$line" == "Test2 OK" ]; then
-                    nt2=$((nt2+1))
+                    test2_counter=$((test2_counter + 1))
                 fi
                 ;;
             3) if [ "$line" == "Test3 OK" ]; then
-                    nt3=$((nt3+1))
+                    test3_counter=$((test3_counter + 1))
                 fi
                 ;;
         esac
-        #conto il numero di client connessi
+        
+        # client launched
         if [ "$line" == "OK" ] ;
             then nclient=$((nclient+1))
         fi        
-fi
-n=$((n+1))
+    fi
+    n=$((n+1))
 done < $filename
-echo "Client connessi: $nclient"
-echo " Esito test 1:"
-echo " -Batterie superate: $nt1 batterie fallite: $((nt1Idedali-nt1))"
-echo " Esito test 2:"
-echo " -batterie test 2 superate: $nt2 batterie fallite: $((nt2Idedali-nt2))"
-echo " Esito test 3"
-echo " -batterie test 3 superate: $nt3 batterie fallite: $((nt3Idedali-nt3))"
-if [ $nt1 == 1000 ] && [ $nt2 == 30 ] && [ $nt3 == 20 ] ; #[ $nclient == 100 ] && 
+
+# printing the results
+echo "Client launched: $nclient"
+echo "========== STATUS TEST 1 =========="
+echo "  Success: $test1_counter "
+echo "  Fail: $((test1_max - test1_counter))"
+echo "========== STATUS TEST 2 =========="
+echo "  Success: $test2_counter "
+echo "  Fail: $((test2_max - test2_counter))"
+echo "========== STATUS TEST 3 =========="
+echo "  Success: $test3_counter "
+echo "  Fail: $((test3_max - test3_counter))"
+
+if [ $test1_counter == 1000 ] && [ $test2_counter == 30 ] && [ $test3_counter == 20 ] ;
     then 
-        echo "Test completato correttamente"
+        echo "Test completed"
     else
-        echo "Test fallito"
+        echo "Test failed"
 fi
-#eseguo la signal sul server
+
+# trigger the signal
 BPID="$(pidof oserver)"
 kill -SIGUSR1 $BPID      

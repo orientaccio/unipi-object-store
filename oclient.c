@@ -158,49 +158,51 @@ void check_args(int argc, char *argv[])
 void debug_menu() 
 {
     printf(
-            "\nSelect operation:\n\
-                1)STORE\n\
-                2)RETRIEVE\n\
-                3)DELETE\n\
-                4)LEAVE\n");
-    char dataName[33];
+            "\nSelect an operation =================\n\
+                1) STORE\n\
+                2) RETRIEVE\n\
+                3) DELETE\n\
+                4) LEAVE\n");
+    char data_name[33];
     char *data;
-    int scelta;
+    int choice;
     int res;
-    scanf("%d", &scelta);
+    CHECKEOF(scanf("%d", &choice), ESCANF);
     
-    switch (scelta) 
+    switch (choice) 
     {
         case 1:
-            printf("Insert data name:");
-            scanf("%s", dataName);
-            printf("Insert data:\n");
-            scanf("%*c%ms", &data);  // ms alloca data dinamicamente
-            CHECKZERO(res, os_store(dataName, data, strlen(data)), "Error STORE");
+            printf("Data name: ");
+            CHECKEOF(scanf("%s", data_name), ESCANF);
+            printf("Data message:\n");
+            CHECKEOF(scanf("%*c%ms", &data), ESCANF);
+            
+            CHECKZERO(res, os_store(data_name, data, strlen(data)), ESTORE);
             free(data);
+            
             break;
         case 2:
-            printf("Insert data name:");
-            scanf("%s", dataName);
-            CHECKZERO(data, os_retrieve(dataName), "Error RETRIEVE");
+            printf("Data name: ");
+            CHECKEOF(scanf("%s", data_name), ESCANF);
+            CHECKZERO(data, os_retrieve(data_name), ERETRIEVE);
 
             if (data != NULL) 
             {
-                fprintf(stderr, "DATA: {%s}", data);
+                fprintf(stderr, "Data retrieved: %s", data);
                 free(data);
             }
             break;
         case 3:
-            printf("Insert data name:");
-            scanf("%s", dataName);
-            CHECKZERO(res, os_delete(dataName), "Error DELETE");
+            printf("Data name: ");
+            CHECKEOF(scanf("%s", data_name), ESCANF);
+            CHECKZERO(res, os_delete(data_name), EDELETE);
             break;
         case 4:
-            CHECKZERO(res, os_disconnect(), "Error LEAVE");
+            os_disconnect();
             exit(EXIT_SUCCESS);
             break;
         default:
-            perror("Error");
+            printf("Choice not valid.\n");
             break;
     }
     

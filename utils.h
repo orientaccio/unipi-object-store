@@ -16,6 +16,7 @@
 #define ESOCKET     "Error on socket"
 #define EREAD       "Error SYSCALL read"
 #define EWRITE      "Error SYSCALL write"
+#define ESCANF      "Error scanf"
 #define EMALLOC     "Error malloc"
 #define EOPEN       "Error opening the file"
 #define EDIR        "Error creating directory"
@@ -35,6 +36,9 @@
     
 #define MUTEXCALL(c, e) \
     if (c != 0) { perror(e); exit(errno); }
+
+#define CHECKEOF(c, e) \
+    if (c == EOF) { perror(e); }
     
 /**
  *@function get_dir_path

@@ -1,11 +1,13 @@
 #include "access.h"
 
+// socket
 static struct sockaddr_un serv_addr;
 static int sockfd;
 
 char buffer[BUFSIZE];
 char *message_error;
 
+// compares the first byte
 int startcmp(char *str1, char *str2) 
 {
     if (str1 == NULL || str2 == NULL) return 0;
@@ -71,7 +73,7 @@ int os_store(char *name, void *block, size_t len)
 
     // send message
     int notused;
-    SYSCALL(notused, write(sockfd, request.str, request.len), EWRITE);
+    SYSCALL(notused, writen(sockfd, request.str, request.len), EWRITE);
     SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     
     free(request.str);
@@ -113,7 +115,7 @@ void *os_retrieve(char *name)
         
         long first_read_len = strlen(file_data);
         long file_len = strtol(data_len, NULL, 10);
-        long n_read = (long) ceilf((file_len - first_read_len) / BUFSIZE);
+        long n_read = (long) ceilf((float)(file_len - first_read_len) / BUFSIZE);
 
         char *data;
         CHECKNULL(data, (char *) malloc(sizeof(char) * (file_len + 1)), EMALLOC);

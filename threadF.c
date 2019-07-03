@@ -76,29 +76,31 @@ client_t *manage_request(char *buf, client_t *client)
         char *file_path = get_file_path(file_name, client->name);
         
         long file_length = strtol(file_len, NULL, 10);
-        long first_read_len = strlen(file_data2);
+        long first_read_len = strlen(file_data1);
         FILE *fp1;
         
+        // writing on file
         if ((fp1 = fopen(file_path, "w")) == NULL) 
         {
-            perror(EOPEN);
+            //perror(EOPEN);
             send_message(client, "KO", ESTORE);
             free(file_path);
             return client;
         }
-
-        long n_read = (long) ceilf((file_length - first_read_len) / BUFSIZE);
-        fwrite(file_data2, sizeof(char), first_read_len, fp1);
+        
+        long n_read = (long) ceilf((float)(file_length - first_read_len) / BUFSIZE);
+        fwrite(file_data1, sizeof(char), first_read_len, fp1);
         
         while (n_read > 0) 
         {
             memset(buf, '\0', BUFSIZE);
             SYSCALL(result, read(client->fd, buf, BUFSIZE), EREAD);
-            int read_len = (n_read > 1) ? BUFSIZE : ((file_length - first_read_len) % BUFSIZE);
+            int read_len = (n_read > 1) ? BUFSIZE : (file_length - first_read_len) % BUFSIZE;
             fwrite(buf, sizeof(char), read_len, fp1);
             n_read--;
         }
-
+        
+        // send response message
         send_message(client, "OK", ESTORE);
         free(file_data2);
         free(file_path);
@@ -145,9 +147,9 @@ client_t *manage_request(char *buf, client_t *client)
         CHECKNULL(response, (char *)malloc(response_len * sizeof(char)), EMALLOC);
         snprintf(response, response_len, "DATA %s \n %s", snum, data);
 
-        fprintf(stderr, "Reponse message: %s\n", "DATA");
+        fprintf(stderr, "Response message: %s\n", "DATA");
 
-        SYSCALL(result, write(client->fd, response, response_len * sizeof(char)), "retrieve send error");
+        SYSCALL(result, writen(client->fd, response, response_len * sizeof(char)), "retrieve send error");
 
         free(snum);
         free(data);
@@ -175,24 +177,30 @@ client_t *manage_request(char *buf, client_t *client)
         client_remove(client);
         return NULL;
     } 
-//     else 
+    else 
+    {
 //         send_message(client, "KO", EINVALID);
+    }
     
     return client;
 }
 
 void *threadF(void *arg) 
 {
+    // client init
     long connfd = (long)arg;
-    char *buffer;
     client_t *client = client_init(connfd);
-    CHECKNULL(buffer, (char *) calloc(BUFSIZE + 1, sizeof(char)), EMALLOC);
+
+    // buffer init
     int result = -1;
+    char *buffer;
+    CHECKNULL(buffer, (char *) calloc(BUFSIZE + 1, sizeof(char)), EMALLOC);
 
     do 
     {
         memset(buffer, '\0', BUFSIZE);
-        SYSCALL(result, read(connfd, buffer, BUFSIZE), "errore lettura thread F");
+        SYSCALL(result, read(connfd, buffer, BUFSIZE), EREAD);
+        
         if (result < 1) 
             break;
         
@@ -205,31 +213,27 @@ void *threadF(void *arg)
     free(buffer);
     client_remove(client);
     close(connfd);
-    pthread_exit("thread closed.\n");
+    pthread_exit("thread terminated.\n");
 
     return NULL;
-}
-
-void print_thread_error(int connfd, char *msg) 
-{
-    fprintf(stderr, "%s", msg);
-    close(connfd);
 }
 
 void spawn_thread(long connfd) 
 {
     pthread_attr_t thattr;
     pthread_t thid;
-    
-    //sigset_t mask, oldmask;
-    //sigemptyset(&mask);
-    //sigaddset(&mask, SIGINT);
-    //sigaddset(&mask, SIGQUIT);
+    /*
+    sigset_t mask, oldmask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGQUIT);
+    sigaddset(&mask, SIGPIPE);
 
-    //if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) {
-    //        print_thread_error(connfd, "FATAL ERROR\n");
-    //        return;
-    //}
+    if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) 
+    {
+        print_thread_error(connfd, "FATAL ERROR\n");
+        return;
+    }*/
     
     if (pthread_attr_init(&thattr) != 0) 
     {

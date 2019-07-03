@@ -2,6 +2,7 @@
 
 // mutex global variable
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+// linked list client_t
 client_t *connected_clients;
 
 int n_client = 0;
@@ -38,8 +39,6 @@ client_t *client_add(client_t *client, char *name)
     // check if already connected
     if (is_connected(name)) 
     {  
-        // TODO reply
-        // TODO exit handler
         MUTEXCALL(pthread_mutex_unlock(&mutex), "unlock error");
         return NULL;
     }

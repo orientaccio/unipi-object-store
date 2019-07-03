@@ -1,5 +1,2 @@
-DEBUG memory leak
-DEBUG gestione server chiuso e riaperto e client rimasto aperto
-
+TODO aggiustare le dimensioni per calcolare
 TODO gestione segnali
-TODO cleanup_handler

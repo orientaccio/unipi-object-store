@@ -33,8 +33,7 @@ OPTFLAGS	= -g -O3
 LIBS        	= -pthread -lm
 
 TARGETS		= oserver	 \
-			oclient	\
-			testout.log
+			oclient
 
 .PHONY: all clean cleandata cleanall test
 .SUFFIXES: .c .h
