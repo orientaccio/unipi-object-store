@@ -1,4 +1,4 @@
-Start Test 1
+Start test 1
 OK 
 
 RESPONSE: OK
@@ -1399,8 +1399,8 @@ OPERATIONS RESULTS ===============
             Operations failed: 0
             Operations total: 20
 
-End Test 1
-Start Test 2
+End test 1
+Start test 2
 OK 
 
 Test2 OK
@@ -1672,7 +1672,7 @@ OPERATIONS RESULTS ===============
             Operations total: 1
 
 End test 2
-Start Test 3
+Start test 3
 OK 
 
 Test3 OK

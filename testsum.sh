@@ -17,14 +17,14 @@ n=1
 while read line; 
 do
     if [ -n "$line" ]; then
-        if [ "$line" == "Start Test 1" ] ;
-            then    test_n=1
+        if [ "$line" == "Start test 1" ]; then
+            test_n=1
         fi
-        if [ "$line" == "Start Test 2" ] ;
-                then    test_n=2
+        if [ "$line" == "Start test 2" ]; then
+            test_n=2
         fi
-        if [ "$line" == "Start Test 3" ] ;
-                    then     test_n=3
+        if [ "$line" == "Start test 3" ]; then
+            test_n=3
         fi
         
         # switch case
@@ -54,15 +54,15 @@ done < $filename
 # printing the results
 echo "Client launched: $nclient"
 echo "========== STATUS TEST 1 =========="
-echo "  Success: $test1_counter "
-echo "  Fail: $((test1_max - test1_counter))"
+echo -e "\tSuccess: $test1_counter "
+echo -e "\tFail:\t $((test1_max - test1_counter))"
 echo "========== STATUS TEST 2 =========="
-echo "  Success: $test2_counter "
-echo "  Fail: $((test2_max - test2_counter))"
+echo -e "\tSuccess: $test2_counter "
+echo -e "\tFail:\t $((test2_max - test2_counter))"
 echo "========== STATUS TEST 3 =========="
-echo "  Success: $test3_counter "
-echo "  Fail: $((test3_max - test3_counter))"
-
+echo -e "\tSuccess: $test3_counter "
+echo -e "\tFail:\t $((test3_max - test3_counter))"
+echo "==================================="
 if [ $test1_counter == 1000 ] && [ $test2_counter == 30 ] && [ $test3_counter == 20 ] ;
     then 
         echo "Test completed"

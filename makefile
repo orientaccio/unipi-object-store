@@ -67,6 +67,7 @@ cleandata	:
 cleanall	: clean cleandata
 	rm -f -r *.o *.a *.sock
 test		:
+	./oserver &
 	> testout.log
-	bash looptest.sh
+	bash testclients.sh
 	bash testsum.sh

@@ -12,12 +12,12 @@ int main(int argc, char *argv[])
 {
     unlink(SOCKNAME);
     if (mkdir("data", 0777) == -1 && errno != EEXIST) 
-        exit(1);
+        exit(EXIT_FAILURE);
 
     signal_manager();
 
     int listenfd = -1;
-    SYSCALL(listenfd, socket(AF_UNIX, SOCK_STREAM, 0), "socket");
+    SYSCALL(listenfd, socket(AF_UNIX, SOCK_STREAM, 0), ESOCKET);
 
     struct sockaddr_un serv_addr;
     memset(&serv_addr, '\0', sizeof(serv_addr));
@@ -25,8 +25,8 @@ int main(int argc, char *argv[])
     strncpy(serv_addr.sun_path, SOCKNAME, strlen(SOCKNAME) + 1);
 
     int notused;
-    SYSCALL(notused, bind(listenfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)), "bind");
-    SYSCALL(notused, listen(listenfd, MAXBACKLOG), "listen");
+    SYSCALL(notused, bind(listenfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)), ESOCKET);
+    SYSCALL(notused, listen(listenfd, MAXBACKLOG), ESOCKET);
     int connfd = -1;
     
     while (1) 
@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
         {
             print_status();
             received = 0;
+            exit(EXIT_SUCCESS);
         }
         else
             spawn_thread(connfd);
@@ -51,7 +52,6 @@ void signal_manager()
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = signal_handler;
-    // sa.sa_flags = ERESTART;
 
     int notused;
     SYSCALL(notused, sigaction(SIGUSR1, &sa, NULL), "sigaction");
@@ -75,7 +75,7 @@ void count_items(char *dir_name)
 {    
     // open directory
     DIR *dir;
-    CHECKNULL(dir, opendir(dir_name), "opendir");
+    CHECKNULL(dir, opendir(dir_name), EDIR);
 
     struct dirent *file;
     while ((file = readdir(dir)) != NULL) 

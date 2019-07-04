@@ -1,7 +1,5 @@
 #include "threadF.h"
 
-char *err_message;
-
 void send_message(client_t *client, char *header, char *message)
 {
     if (client == NULL || header == NULL)
@@ -34,9 +32,6 @@ client_t *manage_request(char *buf, client_t *client)
     char *saveptr;
     char *comand = strtok_r(buf, " ", &saveptr);
     int result;
-    
-    //if (client->name != NULL)
-        //fprintf(stderr, "%s %s\n", client->name, comand);
     
     if (client->name == NULL && strcmp(comand, "REGISTER") != 0) 
     {
@@ -176,10 +171,6 @@ client_t *manage_request(char *buf, client_t *client)
         send_message(client, "OK", NULL);
         client_remove(client);
         return NULL;
-    } 
-    else 
-    {
-//         send_message(client, "KO", EINVALID);
     }
     
     return client;
@@ -222,18 +213,6 @@ void spawn_thread(long connfd)
 {
     pthread_attr_t thattr;
     pthread_t thid;
-    /*
-    sigset_t mask, oldmask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGINT);
-    sigaddset(&mask, SIGQUIT);
-    sigaddset(&mask, SIGPIPE);
-
-    if (pthread_sigmask(SIG_BLOCK, &mask, &oldmask) != 0) 
-    {
-        print_thread_error(connfd, "FATAL ERROR\n");
-        return;
-    }*/
     
     if (pthread_attr_init(&thattr) != 0) 
     {
@@ -257,7 +236,4 @@ void spawn_thread(long connfd)
         close(connfd);
         return;
     }
-
-    // if (pthread_sigmask(SIG_SETMASK, & oldmask, NULL) != 0)
-    // print_thread_error(connfd, "FATAL ERROR\n");
 }

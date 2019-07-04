@@ -119,7 +119,6 @@ void *os_retrieve(char *name)
 
         char *data;
         CHECKNULL(data, (char *) malloc(sizeof(char) * (file_len + 1)), EMALLOC);
-        // file_len+1 o scoppia tutto
         int cx = snprintf(data, file_len + 1, "%s", file_data);
 
         while (n_read > 0) 

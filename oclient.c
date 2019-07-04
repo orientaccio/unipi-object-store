@@ -1,7 +1,7 @@
 #include "access.h"
 
 #define START_SIZE 100  // start offset
-#define INC_SIZE 1000   // modify this to reach 100000 bytes
+#define INC_SIZE 5000   // modify this to reach 100000 bytes
 
 int op_tot = 0;
 int op_fail = 0;
@@ -16,12 +16,11 @@ void debug_menu();
 int main(int argc, char *argv[]) 
 {
     check_args(argc, argv);
-    debug_fprintf("%s\n\n", "TEST MODE ===============");
     
     // enstablish the connection
     int res;
     char *username = argv[1];
-    CHECKZERO(res, os_connect(username), "connection error");
+    CHECKZERO(res, os_connect(username), EREGISTER);
     if (res == 0) 
         exit(EXIT_FAILURE);
 
@@ -64,20 +63,19 @@ void test1()
     char *data;
     CHECKNULL(data, (char*)malloc(sizeof(char) * START_SIZE), EMALLOC);
     int res, i = 0;
-
+    long current_size = 0;
+    
     for (i = 0; i < 20; i++) 
     {
         op_tot++;
-        long current_size = START_SIZE + i * INC_SIZE;
+        current_size = (i == 0) ? START_SIZE : (i + 1) * INC_SIZE;
         data = realloc(data, (sizeof(char) * (current_size + 1)));
-        sprintf(data, "%s", data_sing);
         sprintf(data_name, "%d", i);
-        while (current_size - strlen(data) > 0) 
-        {
-            sprintf(data + strlen(data), "%s", data_sing);
-        }
-
-        CHECKZERO(res, os_store(data_name, data, strlen(data)), "Error STORE");
+        int pos = 0;
+        while (current_size - pos > 0) 
+            pos += sprintf(data + pos, "%s", data_sing);
+        
+        CHECKZERO(res, os_store(data_name, data, strlen(data)), ESTORE);
         fprintf(stderr, "RESPONSE: OK\n");
         
         op_success += res;
@@ -90,11 +88,11 @@ void test1()
 void test2() 
 {
     char *data_name = "test2";
-    char *data_store = "bello";
+    char *data_store = "burlamacco";
     char *data_retrieve;
     int res;
-    CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), "Error STORE");
-    CHECKZERO(data_retrieve, (char *)os_retrieve(data_name), "Error Retrieve");
+    CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), ESTORE);
+    CHECKZERO(data_retrieve, (char *)os_retrieve(data_name), ERETRIEVE);
     op_tot++;
     
     if (strcmp(data_retrieve, data_store) == 0) 
@@ -113,10 +111,10 @@ void test2()
 void test3() 
 {
     char *data_name = "test3";
-    char *data_store = "bello";
+    char *data_store = "carnevale";
     int res;
-    CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), "Error STORE");
-    CHECKZERO(res, os_delete(data_name), "Error DELETE");
+    CHECKZERO(res, os_store(data_name, data_store, strlen(data_store)), ESTORE);
+    CHECKZERO(res, os_delete(data_name), EDELETE);
     op_tot++;
     
     if (res != 1) 
@@ -205,6 +203,4 @@ void debug_menu()
             printf("Choice not valid.\n");
             break;
     }
-    
-    fprintf(stderr, "FINE OP\n"); 
 }
