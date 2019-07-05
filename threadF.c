@@ -71,7 +71,7 @@ client_t *manage_request(char *buf, client_t *client)
         char *file_path = get_file_path(file_name, client->name);
         
         long file_length = strtol(file_len, NULL, 10);
-        long first_read_len = strlen(file_data1);
+        long first_read_len = strlen(file_data2);
         FILE *fp1;
         
         // writing on file
@@ -83,16 +83,13 @@ client_t *manage_request(char *buf, client_t *client)
             return client;
         }
         
-        long n_read = (long) ceilf((float)(file_length - first_read_len) / BUFSIZE);
-        fwrite(file_data1, sizeof(char), first_read_len, fp1);
-        
-        while (n_read > 0) 
+        fwrite(file_data2, sizeof(char), first_read_len, fp1);
+        while (file_length - first_read_len > 0)
         {
             memset(buf, '\0', BUFSIZE);
             SYSCALL(result, read(client->fd, buf, BUFSIZE), EREAD);
-            int read_len = (n_read > 1) ? BUFSIZE : (file_length - first_read_len) % BUFSIZE;
-            fwrite(buf, sizeof(char), read_len, fp1);
-            n_read--;
+            int n = fwrite(buf, sizeof(char), strlen(buf), fp1);
+            file_length -= (long) n;
         }
         
         // send response message

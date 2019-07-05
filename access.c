@@ -114,22 +114,19 @@ void *os_retrieve(char *name)
         char *file_data = strtok_r(NULL, " \n", &saveptr);
         
         long first_read_len = strlen(file_data);
-        long file_len = strtol(data_len, NULL, 10);
-        long n_read = (long) ceilf((float)(file_len - first_read_len) / BUFSIZE);
+        long file_length = strtol(data_len, NULL, 10);
 
         char *data;
-        CHECKNULL(data, (char *) malloc(sizeof(char) * (file_len + 1)), EMALLOC);
-        int cx = snprintf(data, file_len + 1, "%s", file_data);
-
-        while (n_read > 0) 
+        CHECKNULL(data, (char *) malloc(sizeof(char) * (file_length + 1)), EMALLOC);
+        int pos = snprintf(data, file_length + 1, "%s", file_data);
+        while (file_length - first_read_len > 0) 
         {
             memset(buffer, '\0', BUFSIZE);
-            
             SYSCALL(notused, read(sockfd, buffer, BUFSIZE), EREAD);
-            cx += snprintf(data + cx, file_len - cx, "%s", file_data);
-            n_read--;
+            pos += snprintf(data + pos, file_length - pos, "%s", file_data);
+            file_length -= (long) notused;
         }
-
+        fprintf(stderr, "%d\n", notused);
         return data;
     }
     
