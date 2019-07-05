@@ -44,7 +44,7 @@ do
         esac
         
         # client launched
-        if [ "$line" == "OK" ] ;
+        if [ "$line" == "LOGGED" ] ;
             then nclient=$((nclient+1))
         fi        
     fi
@@ -52,23 +52,31 @@ do
 done < $filename
 
 # printing the results
+echo -e "\n\n"
+echo "==================================="
+echo "TESTING"
+echo "==================================="
+echo -e "\n"
 echo "Client launched: $nclient"
-echo "========== STATUS TEST 1 =========="
-echo -e "\tSuccess: $test1_counter "
-echo -e "\tFail:\t $((test1_max - test1_counter))"
-echo "========== STATUS TEST 2 =========="
-echo -e "\tSuccess: $test2_counter "
-echo -e "\tFail:\t $((test2_max - test2_counter))"
-echo "========== STATUS TEST 3 =========="
+echo "---------- STATUS TEST 1 ----------"
+echo -e "Success: $test1_counter "
+echo -e "Fail:\t $((test1_max - test1_counter))"
+echo "---------- STATUS TEST 2 ----------"
+echo -e "Success: $test2_counter "
+echo -e "Fail:\t $((test2_max - test2_counter))"
+echo "---------- STATUS TEST 3 ----------"
 echo -e "\tSuccess: $test3_counter "
-echo -e "\tFail:\t $((test3_max - test3_counter))"
+echo -e "Fail:\t $((test3_max - test3_counter))"
+echo -e "\n"
 echo "==================================="
 if [ $test1_counter == 1000 ] && [ $test2_counter == 30 ] && [ $test3_counter == 20 ] ;
     then 
-        echo "Test completed"
+        echo "ALL COMPLETED"
     else
-        echo "Test failed"
+        echo "FAILED"
 fi
+echo "==================================="
+echo -e "\n\n"
 
 # trigger the signal
 BPID="$(pidof oserver)"

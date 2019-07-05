@@ -114,7 +114,7 @@ void print_status()
     count_items("data");
     
     fprintf(stderr,
-        "\nCURRENT SERVER STATUS ==============\n\
+        "========== CURRENT SERVER STATUS ==========\n\
     Clients online: %d\n\
     Items stored: %d\n\
     Storage size: %ld\n\n",

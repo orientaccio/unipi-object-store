@@ -65,7 +65,7 @@ cleandata	:
 	rm -f -r data
 	
 cleanall	: clean cleandata
-	rm -f -r *.o *.a *.sock
+	rm -f -r *.o *.a *.sock *.log
 test		:
 	./oserver &
 	> testout.log

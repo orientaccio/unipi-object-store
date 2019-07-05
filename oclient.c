@@ -21,7 +21,9 @@ int main(int argc, char *argv[])
     int res;
     char *username = argv[1];
     CHECKZERO(res, os_connect(username), EREGISTER);
-    if (res == 0) 
+    if (res) 
+        fprintf(stderr, "LOGGED\n");
+    else
         exit(EXIT_FAILURE);
 
     // debug mode - test single requests

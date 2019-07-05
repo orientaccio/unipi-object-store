@@ -39,8 +39,6 @@ int os_connect(char *name)
     SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     free(request.str);
     
-    //fprintf(stderr, "%s\n", buffer);
-    
     // response message check
     char *saveptr;
     char *commandr = strtok_r(buffer, " ", &saveptr);
