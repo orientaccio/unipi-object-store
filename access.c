@@ -39,7 +39,7 @@ int os_connect(char *name)
     SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     free(request.str);
     
-    fprintf(stderr, "%s\n", buffer);
+    //fprintf(stderr, "%s\n", buffer);
     
     // response message check
     char *saveptr;
@@ -153,7 +153,7 @@ int os_delete(char *name)
     SYSCALL(notused, write(sockfd, request.str, request.len * sizeof(char)), EWRITE);
     SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     free(request.str);
-
+    
     // response message check
     char *saveptr;
     char *commandr = strtok_r(buffer, " ", &saveptr);
@@ -178,10 +178,14 @@ int os_disconnect()
     SYSCALL(notused, write(sockfd, request.str, strlen(request.str) * sizeof(char)), EWRITE);
     SYSCALL(notused, read(sockfd, buffer, BUFSIZE * sizeof(char)), EREAD);
     free(request.str);
-
-    // response message check
-    if (startcmp(buffer, "OK")) 
-        close(sockfd);
+    close(sockfd);
     
-    return (startcmp(buffer, "OK"));
+    // response message check
+    char *saveptr;
+    char *commandr = strtok_r(buffer, " ", &saveptr);
+    
+    if (startcmp(commandr, "KO")) 
+        message_error = strtok_r(NULL, "\n", &saveptr);
+    
+    return (startcmp(commandr, "OK"));
 }

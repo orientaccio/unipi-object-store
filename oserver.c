@@ -36,9 +36,8 @@ int main(int argc, char *argv[])
         
         if (received == 1)
         {
-            print_status();
             received = 0;
-            exit(EXIT_SUCCESS);
+            print_status();
         }
         else
             spawn_thread(connfd);

@@ -73,10 +73,13 @@ void test1()
         sprintf(data_name, "%d", i);
         int pos = 0;
         while (current_size - pos > 0) 
-            pos += sprintf(data + pos, "%s", data_sing);
+             pos += sprintf(data + pos, "%s", data_sing);
         
         CHECKZERO(res, os_store(data_name, data, strlen(data)), ESTORE);
-        fprintf(stderr, "RESPONSE: OK\n");
+        if (res)
+            fprintf(stderr, "RESPONSE: OK\n");
+        else
+            fprintf(stderr, "RESPONSE: KO\n");
         
         op_success += res;
         op_fail += !res;

@@ -20,7 +20,7 @@ void send_message(client_t *client, char *header, char *message)
     else
         snprintf(response.str, response.len, "%s %s \n", header, message);
     
-    fprintf(stderr, "Response message: %s", response.str);
+    //fprintf(stderr, "Response message: %s", response.str);
     
     // writes
     SYSCALL(result, write(client->fd, response.str, response.len * sizeof(char)), EWRITE);
@@ -178,6 +178,9 @@ client_t *manage_request(char *buf, client_t *client)
 
 void *threadF(void *arg) 
 {
+    // detach self
+    //pthread_detach(pthread_self());
+    
     // client init
     long connfd = (long)arg;
     client_t *client = client_init(connfd);
@@ -201,8 +204,10 @@ void *threadF(void *arg)
     } 
     while (1);
     
+    if (client != NULL)
+        client_remove(client);
+    
     free(buffer);
-    client_remove(client);
     close(connfd);
     pthread_exit("thread terminated.\n");
 

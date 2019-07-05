@@ -21,7 +21,7 @@
 
 #define SOCKNAME "./objstore.sock"
 #define MAXBACKLOG 32
-#define MAXNAMELEN 32
+#define MAXNAMELEN 255
 #define BUFSIZE 512
 
 #define EINVALID    "Error invalid operation" 

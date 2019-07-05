@@ -73,3 +73,4 @@ fi
 # trigger the signal
 BPID="$(pidof oserver)"
 kill -SIGUSR1 $BPID      
+killall -9 oserver 
